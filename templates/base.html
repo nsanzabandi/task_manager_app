@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block extrahead %}
+    {{ form.media }}
+    {% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Task Manager{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    {% block extra_css %}{% endblock %}
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+        }
+        body { background-color: var(--light-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar-brand { font-weight: 700; color: var(--primary-color) !important; }
+        .sidebar { min-height: calc(100vh - 56px); background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; margin: 5px 10px; border-radius: 8px; transition: all 0.3s ease; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background-color: rgba(255,255,255,0.2); transform: translateX(5px); }
+        .main-content { padding: 20px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .card-header { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; border-radius: 12px 12px 0 0 !important; padding: 15px 20px; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border: none; border-radius: 8px; padding: 10px 20px; transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25); }
+        .navbar { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .dropdown-menu { border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: 10px; }
+        .public-content { min-height: calc(100vh - 56px); display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .welcome-card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-white">
+    {% if user.is_authenticated %}
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
+            <img src="{% static 'images/government_logo.png' %}" alt="Logo" style="height: 70px; margin-right: 20px;">
+        </a>
+        <div class="navbar-nav ms-auto">
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                    <div class="user-avatar me-2">{{ user.first_name.0|default:user.username.0|upper }}</div>
+                    {{ user.first_name }} {{ user.last_name }}
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'dashboard' %}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{% url 'task_list' %}"><i class="bi bi-list-task"></i> My Tasks</a></li>
+                    {% if user.is_admin %}<li><a class="dropdown-item" href="{% url 'user_management' %}"><i class="bi bi-people"></i> Manage Users</a></li>{% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</nav>
+<div class="container-fluid">
+    <div class="row">
+        {% if user.is_authenticated %}
+        <div class="col-md-2 p-0">
+            <nav class="sidebar bg-primary vh-100">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'task_list' %}active{% endif %}" href="{% url 'task_list' %}"><i class="bi bi-list-task"></i> Tasks</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'task_create' %}active{% endif %}" href="{% url 'task_create' %}"><i class="bi bi-plus-circle"></i> Create Task</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><i class="bi bi-bar-chart"></i> Reports</a></li>
+                        {% if user.role == 'admin' or user.role == 'super_admin' %}
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}" href="{% url 'user_management' %}"><i class="bi bi-people"></i> Users</a></li>
+                        {% endif %}
+                        {% if user.role == 'super_admin' %}
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'division_list' %}active{% endif %}" href="{% url 'division_list' %}"><i class="bi bi-diagram-3"></i> View Divisions</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </nav>
+        </div>
+        <div class="col-md-10 ms-sm-auto px-md-4">
+        {% else %}
+        <div class="col-12">
+        {% endif %}
+        <main class="py-4">
+            {% block content %}
+                {% if not user.is_authenticated %}
+                <div class="public-content">
+                    <div class="welcome-card">
+                        <h1 class="mb-4"><i class="bi bi-kanban text-primary"></i></h1>
+                        <h2 class="mb-3">Welcome to Task Manager</h2>
+                        <p class="text-muted mb-4">Organize your tasks, track progress, and boost productivity with our comprehensive task management system.</p>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <a href="{% url 'login' %}" class="btn btn-primary btn-lg me-md-2">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </a>
+                            <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-person-plus"></i> Register
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}{{ block.super }}{% endif %}
+            {% endblock %}
+        </main>
+        </div>
+    </div>
+</div>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

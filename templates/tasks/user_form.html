@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit User - Task Manager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-person-gear"></i>
+                    Edit User: {{ user_to_edit.get_full_name|default:user_to_edit.username }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person"></i> First Name *
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person"></i> Last Name *
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.username.id_for_label }}" class="form-label">
+                                    <i class="bi bi-at"></i> Username *
+                                </label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Username cannot be changed after creation.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    <i class="bi bi-envelope"></i> Email Address *
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.division.id_for_label }}" class="form-label">
+                                    <i class="bi bi-building"></i> Division *
+                                </label>
+                                {{ form.division }}
+                                {% if form.division.errors %}
+                                    <div class="text-danger small mt-1">{{ form.division.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.role.id_for_label }}" class="form-label">
+                                    <i class="bi bi-shield"></i> Role *
+                                </label>
+                                {{ form.role }}
+                                {% if form.role.errors %}
+                                    <div class="text-danger small mt-1">{{ form.role.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <small>
+                                        <strong>User:</strong> Can manage own tasks<br>
+                                        <strong>Admin:</strong> Can manage division users and tasks<br>
+                                        <strong>Super Admin:</strong> Can manage all users and tasks
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                <i class="bi bi-check-circle"></i> Active User
+                            </label>
+                            <div class="form-text">Inactive users cannot log in to the system.</div>
+                        </div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a href="{% url 'user_management' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Users
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Update User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- User Information Card (kept for reference, no task stats) -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> User Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>User ID:</strong></td>
+                        <td>{{ user_to_edit.id }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Date Joined:</strong></td>
+                        <td>{{ user_to_edit.date_joined|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Last Login:</strong></td>
+                        <td>
+                            {% if user_to_edit.last_login %}
+                                {{ user_to_edit.last_login|date:"M d, Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Account Status:</strong></td>
+                        <td>
+                            {% if user_to_edit.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const firstName = document.getElementById('{{ form.first_name.id_for_label }}').value.trim();
+        const lastName = document.getElementById('{{ form.last_name.id_for_label }}').value.trim();
+        const username = document.getElementById('{{ form.username.id_for_label }}').value.trim();
+        const email = document.getElementById('{{ form.email.id_for_label }}').value.trim();
+        const division = document.getElementById('{{ form.division.id_for_label }}').value;
+        
+        if (!firstName || !lastName) {
+            e.preventDefault();
+            showError('Please enter both first and last name.');
+            return;
+        }
+        
+        if (!username) {
+            e.preventDefault();
+            showError('Please enter a username.');
+            return;
+        }
+        
+        if (!email) {
+            e.preventDefault();
+            showError('Please enter an email address.');
+            return;
+        }
+        
+        if (!division) {
+            e.preventDefault();
+            showError('Please select a division.');
+            return;
+        }
+        
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            e.preventDefault();
+            showError('Please enter a valid email address.');
+            return;
+        }
+        
+        showLoading('Updating user...');
+    });
+    
+    // Role change warning
+    const roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+    if (roleSelect) {
+        const originalRole = roleSelect.value;
+        
+        roleSelect.addEventListener('change', function() {
+            const newRole = this.value;
+            
+            if (originalRole !== newRole && (newRole === 'admin' || newRole === 'super_admin')) {
+                Swal.fire({
+                    title: 'Role Change Warning',
+                    text: `You are about to grant ${newRole.replace('_', ' ')} privileges to this user. This will give them additional permissions in the system.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#ef4444',
+                    confirmButtonText: 'Yes, change role',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        this.value = originalRole;
+                    }
+                });
+            }
+        });
+    }
+    
+    // Reset password function
+    function resetPassword(username) {
+        Swal.fire({
+            title: 'Reset Password',
+            text: `Are you sure you want to reset the password for user "${username}"? A new temporary password will be generated.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4f46e5',
+            cancelButtonColor: '#ef4444',
+            confirmButtonText: 'Yes, reset password',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Resetting password...');
+                
+                // This would be implemented with an AJAX call
+                setTimeout(() => {
+                    Swal.fire({
+                        title: 'Password Reset',
+                        text: 'A new temporary password has been generated and sent to the user\'s email address.',
+                        icon: 'success',
+                        confirmButtonColor: '#4f46e5'
+                    });
+                }, 1500);
+            }
+        });
+    }
+    
+    // Toggle user status
+    function toggleUserStatus(userId, username, isActive) {
+        const action = isActive ? 'deactivate' : 'activate';
+        const message = `Are you sure you want to ${action} user "${username}"?`;
+        
+        confirmAction(message, function() {
+            showLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}ing user...`);
+            
+            // This would be implemented with an AJAX call
+            setTimeout(() => {
+                showSuccess(`User ${username} has been ${action}d successfully!`);
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            }, 1000);
+        });
+    }
+    
+    // Username availability check (future enhancement)
+    const usernameInput = document.getElementById('{{ form.username.id_for_label }}');
+    if (usernameInput) {
+        let usernameTimeout;
+        usernameInput.addEventListener('input', function() {
+            clearTimeout(usernameTimeout);
+            const username = this.value.trim();
+            
+            if (username.length >= 3) {
+                usernameTimeout = setTimeout(() => {
+                    // Check username availability via AJAX
+                    // This would be implemented in a real application
+                }, 500);
+            }
+        });
+    }
+</script>
+{% endblock %}
+

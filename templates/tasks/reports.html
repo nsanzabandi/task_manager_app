@@ -1,0 +1,475 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports - Task Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0">Reports & Analytics</h1>
+        <p class="text-muted">Generate comprehensive reports and export data</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'export_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </a>
+        <a href="{% url 'export_tasks_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-funnel"></i> Filters
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">From Date</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from|default:'' }}">
+            </div>
+            
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">To Date</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to|default:'' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="priority" class="form-label">Priority</label>
+                <select class="form-select" id="priority" name="priority">
+                    <option value="">All Priorities</option>
+                    <option value="low" {% if selected_priority == 'low' %}selected{% endif %}>Low</option>
+                    <option value="medium" {% if selected_priority == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="high" {% if selected_priority == 'high' %}selected{% endif %}>High</option>
+                    <option value="urgent" {% if selected_priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="division" class="form-label">Division</label>
+                <select class="form-select" id="division" name="division">
+                    <option value="">All Divisions</option>
+                    {% for div in divisions %}
+                    <option value="{{ div.id }}" {% if selected_division == div.id|stringformat:"s" %}selected{% endif %}>{{ div.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="assigned_to" class="form-label">Assigned To</label>
+                <select class="form-select" id="assigned_to" name="assigned_to">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if selected_assigned_to == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-9 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> Apply Filters
+                </button>
+                <a href="{% url 'reports' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistics Overview -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ total_tasks }}</h3>
+                        <p class="mb-0">Total Tasks</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="bi bi-list-task"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ completed_tasks }}</h3>
+                        <p class="mb-0">Completed</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ in_progress_tasks }}</h3>
+                        <p class="mb-0">In Progress</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ overdue_tasks }}</h3>
+                        <p class="mb-0">Overdue</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Analytics -->
+<div class="row mb-4">
+    <div class="col-lg-4 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-pie-chart"></i> Status Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if status_stats %}
+                    {% for stat in status_stats %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-capitalize">{{ stat.status|default:"Unknown" }}</span>
+                        <div class="d-flex align-items-center">
+                            <div class="progress me-2" style="width: 100px; height: 8px;">
+                                <div class="progress-bar 
+                                    {% if stat.status == 'completed' %}bg-success
+                                    {% elif stat.status == 'in_progress' %}bg-info
+                                    {% elif stat.status == 'pending' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}" 
+                                    style="width: {% if total_tasks > 0 %}{% widthratio stat.count total_tasks 100 %}{% else %}0{% endif %}%"></div>
+                            </div>
+                            <span class="badge bg-secondary">{{ stat.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart"></i> Priority Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if priority_stats %}
+                    {% for stat in priority_stats %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-capitalize">{{ stat.priority|default:"Unknown" }}</span>
+                        <div class="d-flex align-items-center">
+                            <div class="progress me-2" style="width: 100px; height: 8px;">
+                                <div class="progress-bar 
+                                    {% if stat.priority == 'urgent' %}bg-danger
+                                    {% elif stat.priority == 'high' %}bg-warning
+                                    {% elif stat.priority == 'medium' %}bg-info
+                                    {% else %}bg-secondary{% endif %}" 
+                                    style="width: {% if total_tasks > 0 %}{% widthratio stat.count total_tasks 100 %}{% else %}0{% endif %}%"></div>
+                            </div>
+                            <span class="badge bg-secondary">{{ stat.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i> Division Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if division_stats %}
+                    {% for stat in division_stats %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ stat.division__name|default:"No Division" }}</span>
+                        <div class="d-flex align-items-center">
+                            <div class="progress me-2" style="width: 100px; height: 8px;">
+                                <div class="progress-bar bg-primary" 
+                                    style="width: {% if total_tasks > 0 %}{% widthratio stat.count total_tasks 100 %}{% else %}0{% endif %}%"></div>
+                            </div>
+                            <span class="badge bg-secondary">{{ stat.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-speedometer2"></i> Performance Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">
+                            {% if avg_completion_time %}
+                                {{ avg_completion_time|floatformat:1 }}h
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </h4>
+                        <p class="text-muted mb-0">Avg. Completion Time</p>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">
+                            {% if total_tasks > 0 %}
+                                {% widthratio completed_tasks total_tasks 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </h4>
+                        <p class="text-muted mb-0">Completion Rate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-week"></i> Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info">{{ recent_tasks_count }}</h4>
+                        <p class="text-muted mb-0">Tasks (Last 30 Days)</p>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ pending_tasks }}</h4>
+                        <p class="text-muted mb-0">Pending Tasks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tasks Preview -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-clock-history"></i> Recent Tasks Preview
+        </h5>
+        <a href="{% url 'task_list' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-primary btn-sm">
+            View All Tasks
+        </a>
+    </div>
+    <div class="card-body p-0">
+        {% if tasks %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Assigned To</th>
+                            <th>Due Date</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <h6 class="mb-0">
+                                        <a href="{% url 'task_detail' task.id %}" class="text-decoration-none">
+                                            {{ task.title }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">{{ task.description|striptags|truncatechars:50 }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if task.status == 'completed' %}bg-success
+                                    {% elif task.status == 'in_progress' %}bg-info
+                                    {% elif task.status == 'pending' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if task.priority == 'urgent' %}bg-danger
+                                    {% elif task.priority == 'high' %}bg-warning
+                                    {% elif task.priority == 'medium' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ task.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if task.assigned_to %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2">
+                                            {{ task.assigned_to.first_name.0|default:task.assigned_to.username.0|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="small">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</div>
+                                            <div class="text-muted small">{{ task.assigned_to.division.name|default:"No Division" }}</div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if task.due_date %}
+                                    <div class="small">{{ task.due_date|date:"M d, Y" }}</div>
+                                    <div class="text-muted small">{{ task.due_date|date:"H:i" }}</div>
+                                {% else %}
+                                    <span class="text-muted">No due date</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="small">{{ task.created_at|date:"M d, Y" }}</div>
+                                <div class="text-muted small">{{ task.created_at|timesince }} ago</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #e5e7eb;"></i>
+                <h4 class="mt-3 text-muted">No tasks found</h4>
+                <p class="text-muted">Try adjusting your filters or create a new task.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form when filters change
+    document.querySelectorAll('#status, #priority, #division, #assigned_to').forEach(function(select) {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Date range validation
+    document.getElementById('date_from').addEventListener('change', function() {
+        const dateFrom = new Date(this.value);
+        const dateTo = new Date(document.getElementById('date_to').value);
+        
+        if (dateTo && dateFrom > dateTo) {
+            showError('From date cannot be later than To date.');
+            this.value = '';
+        }
+    });
+    
+    document.getElementById('date_to').addEventListener('change', function() {
+        const dateFrom = new Date(document.getElementById('date_from').value);
+        const dateTo = new Date(this.value);
+        
+        if (dateFrom && dateTo < dateFrom) {
+            showError('To date cannot be earlier than From date.');
+            this.value = '';
+        }
+    });
+    
+    // Export confirmation
+    document.querySelectorAll('a[href*="export"]').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            showLoading('Generating report...');
+            
+            // Hide loading after a delay (file download doesn't trigger page reload)
+            setTimeout(() => {
+                Swal.close();
+            }, 3000);
+        });
+    });
+    
+    // Quick filter buttons
+    function applyQuickFilter(filterType, value) {
+        const form = document.querySelector('form');
+        const input = form.querySelector(`[name="${filterType}"]`);
+        if (input) {
+            input.value = value;
+            form.submit();
+        }
+    }
+    
+    // Add quick filter buttons for common date ranges
+    function addQuickDateFilters() {
+        const today = new Date();
+        const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        // This would be implemented with additional UI elements
+    }
+</script>
+{% endblock %}
+

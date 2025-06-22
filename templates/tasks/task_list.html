@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+
+{% block title %}Tasks - Task Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0">Tasks</h1>
+        <p class="text-muted">Manage and track your tasks</p>
+    </div>
+    <div>
+        <a href="{% url 'task_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Task
+        </a>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search_query|default:'' }}" placeholder="Search tasks...">
+                </div>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="{{ filter_form.status.id_for_label }}" class="form-label">Status</label>
+                {{ filter_form.status }}
+            </div>
+            
+            <div class="col-md-2">
+                <label for="{{ filter_form.priority.id_for_label }}" class="form-label">Priority</label>
+                {{ filter_form.priority }}
+            </div>
+            
+            <div class="col-md-2">
+                <label for="{{ filter_form.assigned_to.id_for_label }}" class="form-label">Assigned To</label>
+                {{ filter_form.assigned_to }}
+            </div>
+            
+            <div class="col-md-1">
+                <label for="{{ filter_form.date_from.id_for_label }}" class="form-label">From</label>
+                {{ filter_form.date_from }}
+            </div>
+            
+            <div class="col-md-1">
+                <label for="{{ filter_form.date_to.id_for_label }}" class="form-label">To</label>
+                {{ filter_form.date_to }}
+            </div>
+            
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tasks List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-list-task"></i> 
+            Tasks 
+            {% if page_obj.paginator.count %}
+                <span class="badge bg-secondary">{{ page_obj.paginator.count }}</span>
+            {% endif %}
+        </h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="view" id="list-view" checked>
+            <label class="btn btn-outline-primary" for="list-view">
+                <i class="bi bi-list"></i>
+            </label>
+            <input type="radio" class="btn-check" name="view" id="card-view">
+            <label class="btn btn-outline-primary" for="card-view">
+                <i class="bi bi-grid"></i>
+            </label>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if page_obj %}
+            <!-- List View -->
+            <div id="list-view-content">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Assigned To</th>
+                                <th>Due Date</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in page_obj %}
+                            <tr class="priority-{{ task.priority }}">
+                                <td>
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'task_detail' task.id %}" class="text-decoration-none">
+                                                {{ task.title }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted">{{ task.description|truncatewords:25|safe }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ task.status }}">
+                                        {{ task.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ task.get_priority_display }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                            {{ task.assigned_to.first_name.0|default:task.assigned_to.username.0|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="small">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</div>
+                                            <div class="text-muted small">{{ task.assigned_to.division.name|default:"No Division" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if task.due_date %}
+                                        <div class="small">{{ task.due_date|date:"M d, Y" }}</div>
+                                        <div class="text-muted small">{{ task.due_date|date:"H:i" }}</div>
+                                        {% if task.is_overdue %}
+                                            <span class="badge bg-danger small">Overdue</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">No due date</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="small">{{ task.created_at|date:"M d, Y" }}</div>
+                                    <div class="text-muted small">{{ task.created_at|timesince }} ago</div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'task_detail' task.id %}" class="btn btn-outline-primary btn-sm" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if user.is_admin or task.created_by == user %}
+                                        <a href="{% url 'task_edit' task.id %}" class="btn btn-outline-secondary btn-sm" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if user.is_admin or task.created_by == user %}
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                title="Delete"
+                                                onclick="confirmDelete({{ task.id }}, '{{ task.title|escapejs }}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if user == task.assigned_to or user.is_admin %}
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Update Status">
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'pending')">
+                                                    <i class="bi bi-clock text-warning"></i> Pending
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'in_progress')">
+                                                    <i class="bi bi-arrow-clockwise text-info"></i> In Progress
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'completed')">
+                                                    <i class="bi bi-check-circle text-success"></i> Completed
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'cancelled')">
+                                                    <i class="bi bi-x-circle text-danger"></i> Cancelled
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Card View -->
+            <div id="card-view-content" style="display: none;">
+                <div class="row p-3">
+                    {% for task in page_obj %}
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="card task-item priority-{{ task.priority }}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <a href="{% url 'task_detail' task.id %}" class="text-decoration-none">
+                                            {{ task.title|truncatechars:30 }}
+                                        </a>
+                                    </h6>
+                                    <span class="badge bg-secondary">{{ task.get_priority_display }}</span>
+                                </div>
+                                
+                                <p class="card-text text-muted small">{{ task.description|truncatewords:25|safe }}</p>
+                                
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="user-avatar me-2" style="width: 25px; height: 25px; font-size: 0.7rem;">
+                                        {{ task.assigned_to.first_name.0|default:task.assigned_to.username.0|upper }}
+                                    </div>
+                                    <small class="text-muted">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</small>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="status-badge status-{{ task.status }}">
+                                        {{ task.get_status_display }}
+                                    </span>
+                                    <small class="text-muted">{{ task.created_at|date:"M d" }}</small>
+                                </div>
+                                
+                                {% if task.due_date %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-alarm"></i> Due: {{ task.due_date|date:"M d, Y" }}
+                                        {% if task.is_overdue %}
+                                            <span class="badge bg-danger ms-1">Overdue</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #e5e7eb;"></i>
+                <h4 class="mt-3 text-muted">No tasks found</h4>
+                <p class="text-muted">Try adjusting your filters or create a new task.</p>
+                <a href="{% url 'task_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create New Task
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Tasks pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.assigned_to %}&assigned_to={{ request.GET.assigned_to }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.assigned_to %}&assigned_to={{ request.GET.assigned_to }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.assigned_to %}&assigned_to={{ request.GET.assigned_to }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.assigned_to %}&assigned_to={{ request.GET.assigned_to }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmDelete(taskId, taskTitle) {
+    Swal.fire({
+        title: 'Delete Task?',
+        html: `<b>${taskTitle}</b><br>This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#d33',
+        reverseButtons: true,
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `/tasks/${taskId}/delete/`;
+        }
+    });
+}
+</script>
+
+<script>
+    // View toggle functionality
+    document.getElementById('list-view').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('list-view-content').style.display = 'block';
+            document.getElementById('card-view-content').style.display = 'none';
+        }
+    });
+    
+    document.getElementById('card-view').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('list-view-content').style.display = 'none';
+            document.getElementById('card-view-content').style.display = 'block';
+        }
+    });
+    
+    // Auto-submit form on filter change
+    document.querySelectorAll('select[name="status"], select[name="priority"], select[name="assigned_to"]').forEach(function(select) {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Search with debounce
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            this.form.submit();
+        }, 500);
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+<script src="{% static 'ckeditor/ckeditor-init.js' %}"></script>
+<script src="{% static 'ckeditor/ckeditor/ckeditor.js' %}"></script>
+
+{{ form.media }}
+
+{% block title %}{{ title }} - Task Manager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-{% if task %}pencil{% else %}plus-circle{% endif %}"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">
+                                    <i class="bi bi-card-text"></i> Task Title *
+                                </label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.priority.id_for_label }}" class="form-label">
+                                    <i class="bi bi-exclamation-triangle"></i> Priority *
+                                </label>
+                                {{ form.priority }}
+                                {% if form.priority.errors %}
+                                    <div class="text-danger small mt-1">{{ form.priority.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <i class="bi bi-file-text"></i> Description *
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Provide a detailed description of the task.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.assigned_to.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person"></i> Assigned To *
+                                </label>
+                                {{ form.assigned_to }}
+                                {% if form.assigned_to.errors %}
+                                    <div class="text-danger small mt-1">{{ form.assigned_to.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">
+                                    <i class="bi bi-flag"></i> Status *
+                                </label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                    <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar"></i> Due Date
+                                </label>
+                                {{ form.due_date }}
+                                {% if form.due_date.errors %}
+                                    <div class="text-danger small mt-1">{{ form.due_date.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Optional: Set a deadline for this task.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.estimated_hours.id_for_label }}" class="form-label">
+                                    <i class="bi bi-clock"></i> Estimated Hours
+                                </label>
+                                {{ form.estimated_hours }}
+                                {% if form.estimated_hours.errors %}
+                                    <div class="text-danger small mt-1">{{ form.estimated_hours.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Optional: Estimated time to complete this task.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <div>
+                            <a href="{% if task %}{% url 'task_detail' task.id %}{% else %}{% url 'task_list' %}{% endif %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-{% if task %}check{% else %}plus{% endif %}-circle"></i>
+                                {% if task %}Update Task{% else %}Create Task{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Task Guidelines -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightbulb"></i> Task Guidelines
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-check-circle text-success"></i> Best Practices</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-dot"></i> Use clear and descriptive titles</li>
+                            <li><i class="bi bi-dot"></i> Provide detailed descriptions</li>
+                            <li><i class="bi bi-dot"></i> Set realistic due dates</li>
+                            <li><i class="bi bi-dot"></i> Assign appropriate priority levels</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-info-circle text-info"></i> Priority Levels</h6>
+                        <ul class="list-unstyled small">
+                            <li><span class="badge bg-success">Low</span> - Can be done later</li>
+                            <li><span class="badge bg-warning">Medium</span> - Normal priority</li>
+                            <li><span class="badge bg-danger">High</span> - Important task</li>
+                            <li><span class="badge bg-dark">Urgent</span> - Needs immediate attention</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const title = document.getElementById('{{ form.title.id_for_label }}').value.trim();
+        const description = document.getElementById('{{ form.description.id_for_label }}').value.trim();
+        const assignedTo = document.getElementById('{{ form.assigned_to.id_for_label }}').value;
+        
+        if (!title) {
+            e.preventDefault();
+            showError('Please enter a task title.');
+            return;
+        }
+        
+        if (!description) {
+            e.preventDefault();
+            showError('Please enter a task description.');
+            return;
+        }
+        
+        if (!assignedTo) {
+            e.preventDefault();
+            showError('Please select who this task is assigned to.');
+            return;
+        }
+        
+        // Show loading
+        showLoading('{% if task %}Updating{% else %}Creating{% endif %} task...');
+    });
+    
+    // Auto-resize textarea
+    const textarea = document.getElementById('{{ form.description.id_for_label }}');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+    
+    // Priority color preview
+    const prioritySelect = document.getElementById('{{ form.priority.id_for_label }}');
+    if (prioritySelect) {
+        prioritySelect.addEventListener('change', function() {
+            const priority = this.value;
+            let colorClass = '';
+            
+            switch(priority) {
+                case 'low': colorClass = 'border-success'; break;
+                case 'medium': colorClass = 'border-warning'; break;
+                case 'high': colorClass = 'border-danger'; break;
+                case 'urgent': colorClass = 'border-dark'; break;
+            }
+            
+            // Remove existing border classes
+            this.classList.remove('border-success', 'border-warning', 'border-danger', 'border-dark');
+            if (colorClass) {
+                this.classList.add(colorClass);
+            }
+        });
+        
+        // Trigger on page load
+        prioritySelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Due date validation
+    const dueDateInput = document.getElementById('{{ form.due_date.id_for_label }}');
+    if (dueDateInput) {
+        dueDateInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const now = new Date();
+            
+            if (selectedDate < now) {
+                Swal.fire({
+                    title: 'Past Due Date',
+                    text: 'The selected due date is in the past. Are you sure you want to continue?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#ef4444',
+                    confirmButtonText: 'Yes, continue',
+                    cancelButtonText: 'Change date'
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        this.value = '';
+                    }
+                });
+            }
+        });
+    }
+</script>
+{% endblock %}
+

@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} - Task Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'task_list' %}">Tasks</a></li>
+                <li class="breadcrumb-item active">{{ task.title|truncatechars:30 }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        {% if user.is_admin or task.created_by == user %}
+        <a href="{% url 'task_edit' task.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        {% endif %}
+        <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Tasks
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Task Details -->
+    <div class="col-lg-8">
+        <div class="card priority-{{ task.priority }}">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h4 class="mb-1">{{ task.title }}</h4>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="status-badge status-{{ task.status }}">
+                                {{ task.get_status_display }}
+                            </span>
+                            <span class="badge bg-secondary">{{ task.get_priority_display }}</span>
+                            {% if task.is_overdue %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Overdue
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if user == task.assigned_to or user.is_admin %}
+                    <div class="dropdown">
+                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-check-circle"></i> Update Status
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'pending')">
+                                <i class="bi bi-clock text-warning"></i> Pending
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'in_progress')">
+                                <i class="bi bi-arrow-clockwise text-info"></i> In Progress
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'completed')">
+                                <i class="bi bi-check-circle text-success"></i> Completed
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="updateTaskStatus({{ task.id }}, 'cancelled')">
+                                <i class="bi bi-x-circle text-danger"></i> Cancelled
+                            </a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6><i class="bi bi-file-text"></i> Description</h6>
+                    <div class="task-desc-preview" style="max-height: 70px; overflow-y: auto;">
+                        {{ task.description|truncatewords_html:25|safe }}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-info-circle"></i> Task Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Created by:</strong></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2" style="width: 25px; height: 25px; font-size: 0.7rem;">
+                                            {{ task.created_by.first_name.0|default:task.created_by.username.0|upper }}
+                                        </div>
+                                        {{ task.created_by.get_full_name|default:task.created_by.username }}
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Assigned to:</strong></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2" style="width: 25px; height: 25px; font-size: 0.7rem;">
+                                            {{ task.assigned_to.first_name.0|default:task.assigned_to.username.0|upper }}
+                                        </div>
+                                        {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Division:</strong></td>
+                                <td>{{ task.division.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Created:</strong></td>
+                                <td>{{ task.created_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Last updated:</strong></td>
+                                <td>{{ task.updated_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-calendar-event"></i> Timeline & Progress</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Due date:</strong></td>
+                                <td>
+                                    {% if task.due_date %}
+                                        {{ task.due_date|date:"M d, Y H:i" }}
+                                        {% if task.is_overdue %}
+                                            <span class="badge bg-danger ms-1">Overdue</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">No due date set</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Estimated hours:</strong></td>
+                                <td>{{ task.estimated_hours|default:"Not specified" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Actual hours:</strong></td>
+                                <td>{{ task.actual_hours|default:"Not tracked" }}</td>
+                            </tr>
+                            {% if task.completed_at %}
+                            <tr>
+                                <td><strong>Completed:</strong></td>
+                                <td>{{ task.completed_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comments Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-dots"></i> Comments 
+                    <span class="badge bg-secondary">{{ comments.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Add Comment Form -->
+                <form method="post" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ comment_form.content }}
+                        {% if comment_form.content.errors %}
+                            <div class="text-danger small mt-1">{{ comment_form.content.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if comment_form.is_internal %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ comment_form.is_internal }}
+                            <label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">
+                                <i class="bi bi-lock"></i> Internal comment (visible to admins only)
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Add Comment
+                    </button>
+                </form>
+                
+                <!-- Comments List -->
+                {% if comments %}
+                    {% for comment in comments %}
+                    <div class="comment-item {% if comment.is_internal %}border-warning{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-3">
+                                    {{ comment.user.first_name.0|default:comment.user.username.0|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ comment.user.get_full_name|default:comment.user.username }}</h6>
+                                    <small class="text-muted">
+                                        {{ comment.created_at|date:"M d, Y H:i" }}
+                                        {% if comment.is_internal %}
+                                            <span class="badge bg-warning ms-1">
+                                                <i class="bi bi-lock"></i> Internal
+                                            </span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                            {% if comment.created_at != comment.updated_at %}
+                                <small class="text-muted">Edited</small>
+                            {% endif %}
+                        </div>
+                        <p class="mb-0">{{ comment.content|linebreaks }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-chat" style="font-size: 3rem; color: #e5e7eb;"></i>
+                        <p class="text-muted mt-2">No comments yet. Be the first to comment!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user == task.assigned_to or user.is_admin %}
+                    <button class="btn btn-success btn-sm" onclick="updateTaskStatus({{ task.id }}, 'completed')">
+                        <i class="bi bi-check-circle"></i> Mark as Completed
+                    </button>
+                    {% endif %}
+                    
+                    {% if user.is_admin or task.created_by == user %}
+                    <a href="{% url 'task_edit' task.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil"></i> Edit Task
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                        <i class="bi bi-printer"></i> Print Task
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Task History -->
+        {% if task.history.all %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Activity History
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for history in task.history.all|slice:":5" %}
+                <div class="d-flex align-items-start mb-3">
+                    <div class="user-avatar me-3" style="width: 30px; height: 30px; font-size: 0.7rem;">
+                        {{ history.user.first_name.0|default:history.user.username.0|upper }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="small">
+                            <strong>{{ history.user.get_full_name|default:history.user.username }}</strong>
+                            {{ history.action|lower }}
+                        </div>
+                        {% if history.old_value and history.new_value %}
+                        <div class="text-muted small">
+                            From: {{ history.old_value }} → {{ history.new_value }}
+                        </div>
+                        {% elif history.new_value %}
+                        <div class="text-muted small">
+                            {{ history.new_value }}
+                        </div>
+                        {% endif %}
+                        <div class="text-muted small">{{ history.timestamp|timesince }} ago</div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if task.history.count > 5 %}
+                <div class="text-center">
+                    <small class="text-muted">{{ task.history.count|add:"-5" }} more activities...</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Related Tasks -->
+        {% if user.is_admin %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-link"></i> Related Tasks
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Tasks assigned to {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</p>
+                <!-- This would show other tasks assigned to the same user -->
+                <div class="text-center">
+                    <a href="{% url 'task_list' %}?assigned_to={{ task.assigned_to.id }}" class="btn btn-sm btn-outline-primary">
+                        View All Tasks
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh comments every 30 seconds
+    setInterval(function() {
+        // Only refresh if user is not typing in the comment box
+        const commentBox = document.querySelector('textarea[name="content"]');
+        if (commentBox && !commentBox.matches(':focus')) {
+            // Could implement AJAX refresh here
+        }
+    }, 30000);
+    
+    // Comment form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const content = document.querySelector('textarea[name="content"]').value.trim();
+        if (!content) {
+            e.preventDefault();
+            showError('Please enter a comment before submitting.');
+            return;
+        }
+        
+        showLoading('Adding comment...');
+    });
+    
+    // Auto-resize comment textarea
+    const textarea = document.querySelector('textarea[name="content"]');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+    
+    // Print styles
+    const printStyles = `
+        <style media="print">
+            .sidebar, .navbar, .btn, .dropdown { display: none !important; }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+            .main-content { padding: 0 !important; }
+        </style>
+    `;
+    document.head.insertAdjacentHTML('beforeend', printStyles);
+</script>
+{% endblock %}
+

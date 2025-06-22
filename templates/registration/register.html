@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - Task Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, white 0%, gray 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 0;
+    }
+
+    .login-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    /*   Optional for background contrast */
+    }
+    
+    .register-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        overflow: hidden;
+        max-width: 1000px;
+        width: 100%;
+        margin: 20px;
+    }
+    
+    .register-left {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+        padding: 60px 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .register-right {
+        padding: 60px 40px;
+    }
+    
+    .register-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.9;
+    }
+    
+    .register-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .register-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 30px;
+    }
+    
+    .form-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 10px;
+    }
+    
+    .form-subtitle {
+        color: #6b7280;
+        margin-bottom: 30px;
+    }
+    
+    .form-floating {
+        margin-bottom: 20px;
+    }
+    
+    .form-floating .form-control,
+    .form-floating .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 15px;
+        height: auto;
+    }
+    
+    .form-floating .form-control:focus,
+    .form-floating .form-select:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+    }
+    
+    .btn-register {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        border: none;
+        border-radius: 10px;
+        padding: 15px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        width: 100%;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-register:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+    }
+    
+    .login-link {
+        text-align: center;
+        color: #6b7280;
+    }
+    
+    .login-link a {
+        color: #4f46e5;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+    
+    .password-help {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 5px;
+    }
+    
+    @media (max-width: 768px) {
+        .register-left {
+            display: none;
+        }
+        
+        .register-right {
+            padding: 40px 30px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+    <div class="register-container">
+        <div class="row g-0">
+            <div class="col-lg-5">
+                <div class="register-left">
+                    <div class="register-icon">
+                        <i class="bi bi-person-plus"></i>
+                    </div>
+                    <h1 class="register-title">Join Us</h1>
+                    <p class="register-subtitle">Create your account and start managing tasks efficiently</p>
+                    
+                    <div class="features">
+                        <div class="feature-item">
+                            <i class="bi bi-lightning-fill"></i>
+                            <span>Quick setup in minutes</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="bi bi-shield-lock-fill"></i>
+                            <span>Secure and private</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="bi bi-people-fill"></i>
+                            <span>Team collaboration</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-7">
+                <div class="register-right">
+                    <h2 class="form-title">Create Account</h2>
+                    <p class="form-subtitle">Fill in your details to get started</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.first_name }}
+                                    <label for="{{ form.first_name.id_for_label }}">First Name</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.last_name }}
+                                    <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating">
+                            {{ form.username }}
+                            <label for="{{ form.username.id_for_label }}">Username</label>
+                            {% if form.username.errors %}
+                                <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-floating">
+                            {{ form.email }}
+                            <label for="{{ form.email.id_for_label }}">Email Address</label>
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-floating">
+                                    {{ form.division }}
+                                    <label for="{{ form.division.id_for_label }}">Division</label>
+                                    {% if form.division.errors %}
+                                        <div class="text-danger small mt-1">{{ form.division.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    {{ form.phone }}
+                                    <label for="{{ form.phone.id_for_label }}">Phone (Optional)</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating">
+                            {{ form.password1 }}
+                            <label for="{{ form.password1.id_for_label }}">Password</label>
+                            {% if form.password1.errors %}
+                                <div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>
+                            {% endif %}
+                            <div class="password-help">
+                                Password must be at least 8 characters long and not too common.
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating">
+                            {{ form.password2 }}
+                            <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+                            {% if form.password2.errors %}
+                                <div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-primary btn-register">
+                            <i class="bi bi-person-plus me-2"></i>
+                            Create Account
+                        </button>
+                    </form>
+                    
+                    <div class="login-link">
+                        Already have an account? <a href="{% url 'login' %}">Sign in here</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

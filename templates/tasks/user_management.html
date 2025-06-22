@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - Task Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0">User Management</h1>
+        <p class="text-muted">Manage users in your {% if user.is_super_admin %}organization{% else %}division{% endif %}</p>
+    </div>
+    <div>
+        <a href="{% url 'register' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add New User
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search Users</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search_query|default:'' }}" placeholder="Search by name, username, or email...">
+                </div>
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> Search
+                </button>
+                <a href="{% url 'user_management' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-people"></i> 
+            Users 
+            {% if page_obj.paginator.count %}
+                <span class="badge bg-secondary">{{ page_obj.paginator.count }}</span>
+            {% endif %}
+        </h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="view" id="table-view" checked>
+            <label class="btn btn-outline-primary" for="table-view">
+                <i class="bi bi-table"></i>
+            </label>
+            <input type="radio" class="btn-check" name="view" id="grid-view">
+            <label class="btn btn-outline-primary" for="grid-view">
+                <i class="bi bi-grid-3x3"></i>
+            </label>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if page_obj %}
+            <!-- Table View -->
+            <div id="table-view-content">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Contact</th>
+                                <th>Division</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_item in page_obj %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-3">
+                                            {{ user_item.first_name.0|default:user_item.username.0|upper }}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ user_item.get_full_name|default:user_item.username }}</h6>
+                                            <small class="text-muted">@{{ user_item.username }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="small">
+                                            <i class="bi bi-envelope"></i> {{ user_item.email }}
+                                        </div>
+                                        {% if user_item.phone %}
+                                        <div class="small text-muted">
+                                            <i class="bi bi-telephone"></i> {{ user_item.phone }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if user_item.division %}
+                                        <span class="badge bg-info">{{ user_item.division.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted">No Division</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user_item.role == 'super_admin' %}
+                                        <span class="badge bg-danger">Super Admin</span>
+                                    {% elif user_item.role == 'admin' %}
+                                        <span class="badge bg-warning">Admin</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">User</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user_item.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="small">{{ user_item.date_joined|date:"M d, Y" }}</div>
+                                    <div class="text-muted small">{{ user_item.date_joined|timesince }} ago</div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'user_edit' user_item.id %}" class="btn btn-outline-primary btn-sm" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'task_list' %}?assigned_to={{ user_item.id }}" class="btn btn-outline-info btn-sm" title="View Tasks">
+                                            <i class="bi bi-list-task"></i>
+                                        </a>
+                                        {% if user_item != user %}
+                                        <button class="btn btn-outline-danger btn-sm" title="Toggle Status" 
+                                                onclick="toggleUserStatus({{ user_item.id }}, '{{ user_item.username }}', {{ user_item.is_active|yesno:'true,false' }})">
+                                            <i class="bi bi-{% if user_item.is_active %}pause{% else %}play{% endif %}"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Grid View -->
+            <div id="grid-view-content" style="display: none;">
+                <div class="row p-3">
+                    {% for user_item in page_obj %}
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="user-avatar mx-auto mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                                    {{ user_item.first_name.0|default:user_item.username.0|upper }}
+                                </div>
+                                
+                                <h6 class="card-title">{{ user_item.get_full_name|default:user_item.username }}</h6>
+                                <p class="text-muted small">@{{ user_item.username }}</p>
+                                
+                                <div class="mb-2">
+                                    {% if user_item.role == 'super_admin' %}
+                                        <span class="badge bg-danger">Super Admin</span>
+                                    {% elif user_item.role == 'admin' %}
+                                        <span class="badge bg-warning">Admin</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">User</span>
+                                    {% endif %}
+                                    
+                                    {% if user_item.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="small text-muted mb-3">
+                                    <div><i class="bi bi-envelope"></i> {{ user_item.email }}</div>
+                                    {% if user_item.division %}
+                                    <div><i class="bi bi-building"></i> {{ user_item.division.name }}</div>
+                                    {% endif %}
+                                    <div><i class="bi bi-calendar"></i> Joined {{ user_item.date_joined|date:"M Y" }}</div>
+                                </div>
+                                
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'user_edit' user_item.id %}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'task_list' %}?assigned_to={{ user_item.id }}" class="btn btn-outline-info" title="View Tasks">
+                                        <i class="bi bi-list-task"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people" style="font-size: 4rem; color: #e5e7eb;"></i>
+                <h4 class="mt-3 text-muted">No users found</h4>
+                <p class="text-muted">Try adjusting your search or add a new user.</p>
+                <a href="{% url 'register' %}" class="btn btn-primary">
+                    <i class="bi bi-person-plus"></i> Add New User
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Users pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+            </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- User Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-primary">{{ total_users }}</h3>
+                <p class="text-muted mb-0">Total Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-success">{{ active_users_count }}</h3>
+                <p class="text-muted mb-0">Active Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-warning">{{ admin_count }}</h3>
+                <p class="text-muted mb-0">Admins</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-info">{{ new_users_this_month }}</h3>
+                <p class="text-muted mb-0">New This Month</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // View toggle functionality
+    document.getElementById('table-view').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('table-view-content').style.display = 'block';
+            document.getElementById('grid-view-content').style.display = 'none';
+        }
+    });
+    
+    document.getElementById('grid-view').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('table-view-content').style.display = 'none';
+            document.getElementById('grid-view-content').style.display = 'block';
+        }
+    });
+    
+    // Search with debounce
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            this.form.submit();
+        }, 500);
+    });
+    
+    // Toggle user status
+    function toggleUserStatus(userId, username, isActive) {
+    const action = isActive ? 'deactivate' : 'activate';
+    const message = `Are you sure you want to ${action} user "${username}"?`;
+
+    confirmAction(message, function () {
+        showLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}ing user...`);
+
+        fetch(`/users/${userId}/toggle-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')  // Add this if CSRF is enforced
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess(data.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showError(data.message || 'Something went wrong.');
+            }
+        })
+        .catch(() => showError('Server error. Please try again later.'));
+    });
+}
+
+    
+    // Bulk actions (future enhancement)
+    function selectAllUsers() {
+        const checkboxes = document.querySelectorAll('input[name="selected_users"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+    }
+    
+    function deselectAllUsers() {
+        const checkboxes = document.querySelectorAll('input[name="selected_users"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+</script>
+{% endblock %}
+
