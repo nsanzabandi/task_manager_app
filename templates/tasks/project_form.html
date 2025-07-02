@@ -1,0 +1,598 @@
+<!-- templates/tasks/project_form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{{ form.media }}
+
+{% block title %}{{ title|default:"Create Project" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fc;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #4e73df;
+    }
+    .required-field {
+        color: #e74a3b;
+    }
+    .field-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .loading-spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #4e73df;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 0.5rem;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .admin-info {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    /* TinyMCE specific styles */
+    .tox-tinymce {
+        border-radius: 6px !important;
+        border: 1px solid #d1d3e2 !important;
+    }
+    .tox-tinymce:focus-within {
+        border-color: #4e73df !important;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'project_list' %}">Projects</a>
+            </li>
+            <li class="breadcrumb-item active">{{ title|default:"Create Project" }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-{% if project %}edit{% else %}plus{% endif %} me-2"></i>
+                {{ title|default:"Create Project" }}
+            </h2>
+            <p class="text-muted mb-0">
+                {% if project %}
+                    Update project details and assignment
+                {% else %}
+                    Create a new project and assign it to a division admin
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Project Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="project-form">
+                        {% csrf_token %}
+                        
+                        <!-- Project Basic Info Section -->
+                        <div class="form-section">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Basic Information
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">
+                                    Project Title <span class="required-field">*</span>
+                                </label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+                                {% endif %}
+                                <div class="field-help">
+                                    Enter a clear, descriptive title for the project
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    <i class="fas fa-file-text me-1"></i> Project Description
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                                <div class="field-help">
+                                    Provide detailed information about the project goals, scope, objectives, and requirements. Use rich formatting to organize your content effectively.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assignment Section -->
+                        <div class="form-section">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-users me-2"></i>Project Assignment
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.division.id_for_label }}" class="form-label">
+                                    Division <span class="required-field">*</span>
+                                </label>
+                                {{ form.division }}
+                                {% if form.division.errors %}
+                                    <div class="text-danger small mt-1">{{ form.division.errors.0 }}</div>
+                                {% endif %}
+                                <div class="field-help">
+                                    Select the division responsible for this project
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.assigned_to_admin.id_for_label }}" class="form-label">
+                                    Project Admin <span class="required-field">*</span>
+                                    <span class="loading-spinner" id="admin-loading"></span>
+                                </label>
+                                {{ form.assigned_to_admin }}
+                                {% if form.assigned_to_admin.errors %}
+                                    <div class="text-danger small mt-1">{{ form.assigned_to_admin.errors.0 }}</div>
+                                {% endif %}
+                                <div class="field-help">
+                                    The admin who will manage this project and its tasks
+                                </div>
+                                
+                                <!-- Admin Info Display -->
+                                <div class="admin-info" id="admin-info">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-tie me-2 text-primary"></i>
+                                        <div>
+                                            <strong>Selected Admin:</strong>
+                                            <span id="admin-name"></span>
+                                            <br>
+                                            <small class="text-muted">
+                                                <span id="admin-division"></span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Next Steps Info -->
+                        {% if not project %}
+                        <div class="form-section">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Next Steps
+                            </h6>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>After creating the project, you can:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Upload project files</li>
+                                    <li>Create initial tasks</li>
+                                    <li>Assign team members</li>
+                                    <li>Set project timeline and budget</li>
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Form Validation Alerts -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'project_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {% if project %}Update Project{% else %}Create Project{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with Help -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-question-circle me-2"></i>Help & Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-dark">Project Creation Process</h6>
+                        <ol class="small text-muted">
+                            <li>Enter a descriptive project title</li>
+                            <li>Select the responsible division</li>
+                            <li>Choose an admin from that division</li>
+                            <li>Add detailed project description with rich formatting</li>
+                        </ol>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="text-dark">Description Best Practices</h6>
+                        <ul class="small text-muted">
+                            <li>Use headings to organize content</li>
+                            <li>Add bullet points for key requirements</li>
+                            <li>Include project goals and objectives</li>
+                            <li>Mention important deadlines or milestones</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="text-dark">After Creation</h6>
+                        <ul class="small text-muted">
+                            <li>Upload project files and resources</li>
+                            <li>Create and assign tasks to team members</li>
+                            <li>Monitor project progress and milestones</li>
+                            <li>Collaborate and communicate with the team</li>
+                        </ul>
+                    </div>
+
+                    {% if user.is_super_admin %}
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle me-2"></i>
+                        As a Super Admin, you can assign projects to any division and admin.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if project %}
+            <!-- Project Statistics -->
+            <div class="card shadow mt-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-bar me-2"></i>Current Statistics
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="h4 mb-0 text-primary">{{ project.tasks.count }}</div>
+                                <small class="text-muted">Total Tasks</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="h4 mb-0 text-success">{{ project.get_progress_percentage }}%</div>
+                                <small class="text-muted">Complete</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        Created {{ project.created_at|date:"M d, Y" }}
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- TinyMCE CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
+<!-- SweetAlert2 for better notifications -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize TinyMCE for project description
+    tinymce.init({
+        selector: 'textarea[name="description"]',
+        height: 500,
+        
+        // CRITICAL: Set the base URL to prevent 404 errors
+        base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6',
+        suffix: '.min',
+        
+        menubar: 'file edit view insert format tools table help',
+        plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'paste'
+        ],
+        toolbar: 'undo redo | blocks fontfamily fontsize | ' +
+        'bold italic underline strikethrough | forecolor backcolor | ' +
+        'alignleft aligncenter alignright alignjustify | ' +
+        'bullist numlist outdent indent | removeformat | ' +
+        'table link image | code fullscreen | help',
+        
+        content_style: `
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                font-size: 14px; 
+                line-height: 1.6; 
+                margin: 10px; 
+            }
+            p { margin: 0 0 10px 0; }
+            h1 { font-size: 24px; margin: 20px 0 15px 0; font-weight: bold; color: #2d3748; }
+            h2 { font-size: 20px; margin: 18px 0 12px 0; font-weight: bold; color: #2d3748; }
+            h3 { font-size: 18px; margin: 15px 0 10px 0; font-weight: bold; color: #4a5568; }
+            h4, h5, h6 { margin: 15px 0 10px 0; font-weight: bold; color: #4a5568; }
+            ul, ol { margin: 0 0 10px 20px; }
+            li { margin: 3px 0; }
+            table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+            table td, table th { border: 1px solid #e2e8f0; padding: 10px; }
+            table th { background-color: #f7fafc; font-weight: bold; }
+            blockquote { 
+                border-left: 4px solid #4e73df; 
+                padding-left: 15px; 
+                margin: 15px 0; 
+                color: #6c757d; 
+                font-style: italic; 
+            }
+            code { 
+                background-color: #f8f9fa; 
+                padding: 2px 6px; 
+                border-radius: 3px; 
+                font-family: 'Courier New', monospace; 
+            }
+            pre { 
+                background-color: #f8f9fa; 
+                padding: 15px; 
+                border-radius: 6px; 
+                overflow-x: auto; 
+            }
+        `,
+        
+        // Remove branding and promotional content
+        branding: false,
+        promotion: false,
+        
+        // Better user experience
+        resize: true,
+        statusbar: true,
+        elementpath: true,
+        
+        // Auto-save content to textarea
+        setup: function (editor) {
+            editor.on('change keyup setContent', function () {
+                editor.save();
+            });
+            
+            editor.on('init', function() {
+                console.log('TinyMCE initialized successfully for project description!');
+            });
+        },
+        
+        // Paste settings for better content handling
+        paste_as_text: false,
+        paste_auto_cleanup_on_paste: true,
+        paste_remove_styles_if_webkit: false,
+        paste_webkit_styles: "color font-size font-family background-color",
+        
+        // Image handling
+        image_advtab: true,
+        image_caption: true,
+        image_title: true,
+        
+        // Link handling
+        link_assume_external_targets: true,
+        link_context_toolbar: true,
+        link_title: false,
+        
+        // Table settings
+        table_default_attributes: {
+            border: '1',
+            cellpadding: '10',
+            cellspacing: '0'
+        },
+        table_default_styles: {
+            'border-collapse': 'collapse',
+            'width': '100%'
+        },
+        table_class_list: [
+            {title: 'None', value: ''},
+            {title: 'Simple Table', value: 'table'},
+            {title: 'Striped Table', value: 'table table-striped'},
+            {title: 'Bordered Table', value: 'table table-bordered'}
+        ],
+        
+        // Font options
+        font_family_formats: 'Arial=arial,helvetica,sans-serif; Times New Roman=times new roman,times,serif; Courier New=courier new,courier,monospace; Helvetica=helvetica; Verdana=verdana; Georgia=georgia,serif;',
+        font_size_formats: '8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 20pt 24pt 36pt 48pt',
+        
+        // Block formats for better content organization
+        block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Preformatted=pre; Blockquote=blockquote',
+        
+        // Error handling
+        init_instance_callback: function (editor) {
+            console.log('TinyMCE editor with ID: ' + editor.id + ' has been initialized for project form.');
+        }
+    });
+
+    // Division-Admin Dynamic Loading
+    const divisionSelect = document.getElementById('id_division');
+    const adminSelect = document.getElementById('id_assigned_to_admin');
+    const adminLoading = document.getElementById('admin-loading');
+    const adminInfo = document.getElementById('admin-info');
+    const adminName = document.getElementById('admin-name');
+
+    if (divisionSelect && adminSelect) {
+        divisionSelect.addEventListener('change', function() {
+            const divisionId = this.value;
+            
+            if (divisionId) {
+                adminLoading.style.display = 'inline-block';
+                adminSelect.disabled = true;
+                
+                fetch(`{% url 'get_division_admins' %}?division_id=${divisionId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        adminSelect.innerHTML = '<option value="">Select Admin</option>';
+                        
+                        if (data.admins && data.admins.length > 0) {
+                            data.admins.forEach(admin => {
+                                const option = document.createElement('option');
+                                option.value = admin.id;
+                                option.textContent = admin.name;
+                                adminSelect.appendChild(option);
+                            });
+                        } else {
+                            adminSelect.innerHTML = '<option value="">No admins available</option>';
+                        }
+                        
+                        adminSelect.disabled = false;
+                        adminLoading.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching admins:', error);
+                        adminSelect.innerHTML = '<option value="">Error loading admins</option>';
+                        adminSelect.disabled = false;
+                        adminLoading.style.display = 'none';
+                    });
+            } else {
+                adminSelect.innerHTML = '<option value="">Select Division First</option>';
+                adminInfo.style.display = 'none';
+            }
+        });
+
+        // Show admin info when selection changes
+        adminSelect.addEventListener('change', function() {
+            if (this.value && this.selectedIndex > 0) {
+                adminName.textContent = this.options[this.selectedIndex].text;
+                adminInfo.style.display = 'block';
+            } else {
+                adminInfo.style.display = 'none';
+            }
+        });
+    }
+
+    // Form submission enhancement with validation
+    const form = document.getElementById('project-form');
+    form.addEventListener('submit', function(e) {
+        // Validate required fields
+        const titleField = document.getElementById('id_title');
+        const divisionField = document.getElementById('id_division');
+        const adminField = document.getElementById('id_assigned_to_admin');
+        
+        // Get description from TinyMCE
+        const descriptionEditor = tinymce.get('id_description');
+        const description = descriptionEditor ? descriptionEditor.getContent().trim() : '';
+        
+        // Validation checks
+        if (!titleField.value.trim()) {
+            e.preventDefault();
+            showError('Please enter a project title.');
+            return;
+        }
+        
+        if (!divisionField.value) {
+            e.preventDefault();
+            showError('Please select a division.');
+            return;
+        }
+        
+        if (!adminField.value) {
+            e.preventDefault();
+            showError('Please select a project admin.');
+            return;
+        }
+        
+        // Optional description validation (you can enable this if description is required)
+        // if (!description || description === '<p></p>' || description === '<p><br></p>') {
+        //     e.preventDefault();
+        //     showError('Please enter a project description.');
+        //     return;
+        // }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+        submitBtn.disabled = true;
+        
+        // Show loading notification
+        showLoading('{% if project %}Updating{% else %}Creating{% endif %} project...');
+        
+        // Re-enable button after 15 seconds as fallback
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 15000);
+    });
+});
+
+// Utility functions for notifications
+function showError(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Validation Error',
+            text: message,
+            icon: 'error',
+            confirmButtonColor: '#4e73df',
+            confirmButtonText: 'OK'
+        });
+    } else {
+        alert(message);
+    }
+}
+
+function showLoading(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: message,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+}
+
+function showSuccess(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Success!',
+            text: message,
+            icon: 'success',
+            confirmButtonColor: '#4e73df',
+            timer: 3000,
+            timerProgressBar: true
+        });
+    }
+}
+</script>
+{% endblock %}

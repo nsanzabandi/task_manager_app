@@ -1,0 +1,316 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Projects{% endblock %}
+
+{% block extra_css %}
+<style>
+    .project-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .project-card .card-header {
+        background: rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .project-card .card-title a {
+        color: white !important;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    .project-card .card-title a:hover {
+        color: #f8f9fa !important;
+    }
+    .project-card .dropdown-toggle {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white !important;
+    }
+    .project-card .dropdown-toggle:hover,
+    .project-card .dropdown-toggle:focus {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        color: white !important;
+        box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+    }
+    .project-card .text-muted {
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+    .project-card .card-footer {
+        background: rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .progress-mini {
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.3);
+    }
+    .role-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+    }
+    .stats-icon {
+        width: 20px;
+        height: 20px;
+        opacity: 0.9;
+        color: white;
+    }
+    .stat-item .fw-bold {
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-0 text-gray-800">
+                        <i class="fas fa-project-diagram me-2"></i>Projects
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {% if user.is_super_admin %}
+                            Manage all projects across divisions
+                        {% elif user.is_admin %}
+                            Projects in your division and assigned to you
+                        {% else %}
+                            Projects where you have assigned tasks
+                        {% endif %}
+                    </p>
+                </div>
+                {% if user.is_super_admin %}
+                <div>
+                    <a href="{% url 'project_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create Project
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="d-flex">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Search projects..." 
+                       value="{{ search_query|default:'' }}">
+                <button type="submit" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-search"></i>
+                </button>
+                {% if search_query %}
+                <a href="{% url 'project_list' %}" class="btn btn-outline-danger ms-2">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-6 text-end">
+            <span class="text-muted">
+                {{ page_obj.paginator.count }} project{{ page_obj.paginator.count|pluralize }} found
+            </span>
+        </div>
+    </div>
+
+    <!-- Projects Grid -->
+    {% if page_obj.object_list %}
+    <div class="row">
+        {% for project in page_obj.object_list %}
+        <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+            <div class="card project-card h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="card-title mb-1 fw-bold">
+                            <a href="{% url 'project_detail' project.id %}" 
+                               class="text-decoration-none">
+                                {{ project.title|truncatechars:30 }}
+                            </a>
+                        </h6>
+                        <div class="dropdown">
+                            <button class="btn btn-sm dropdown-toggle" 
+                                    type="button" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'project_detail' project.id %}">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a>
+                                </li>
+                                {% if user.is_super_admin or project.assigned_to_admin == user %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'project_edit' project.id %}">
+                                        <i class="fas fa-edit me-2"></i>Edit Project
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'project_task_create' project.id %}">
+                                        <i class="fas fa-plus me-2"></i>Add Task
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ project.division.name }}</small>
+                </div>
+                
+                <div class="card-body pt-2">
+                    <p class="card-text text-muted small mb-3">
+                        {{ project.description|truncatechars:80|default:"No description provided." }}
+                    </p>
+                    
+                    <!-- Project Progress -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Progress</small>
+                            <small class="fw-bold text-white">{{ project.progress }}%</small>
+                        </div>
+                        <div class="progress progress-mini">
+                            <div class="progress-bar bg-light" 
+                                 style="width: {{ project.progress }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Project Stats -->
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="stat-item">
+                                <i class="fas fa-tasks stats-icon"></i>
+                                <div class="fw-bold">{{ project.total_tasks }}</div>
+                                <small class="text-muted">Tasks</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-item">
+                                <i class="fas fa-check-circle stats-icon"></i>
+                                <div class="fw-bold">{{ project.completed_tasks }}</div>
+                                <small class="text-muted">Done</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            {% if not user.is_super_admin %}
+                            <div class="stat-item">
+                                <i class="fas fa-user stats-icon"></i>
+                                <div class="fw-bold">{{ project.my_tasks }}</div>
+                                <small class="text-muted">My Tasks</small>
+                            </div>
+                            {% else %}
+                            <div class="stat-item">
+                                <i class="fas fa-clock stats-icon"></i>
+                                <div class="fw-bold">{{ project.total_tasks|add:"-"|add:project.completed_tasks }}</div>
+                                <small class="text-muted">Pending</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">
+                                Admin: <strong class="text-white">{{ project.assigned_to_admin.get_display_name|default:"Unassigned" }}</strong>
+                            </small>
+                        </div>
+                        <div>
+                            {% if user_role == 'super_admin' %}
+                                <span class="badge role-badge bg-danger">Super Admin</span>
+                            {% elif project.assigned_to_admin == user %}
+                                <span class="badge role-badge bg-primary">Project Admin</span>
+                            {% elif user.is_admin %}
+                                <span class="badge role-badge bg-info">Division Admin</span>
+                            {% else %}
+                                <span class="badge role-badge bg-secondary">Team Member</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <small class="text-muted">Created {{ project.created_at|date:"M d, Y" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Projects pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-project-diagram text-muted mb-3" style="font-size: 4rem;"></i>
+                <h4 class="text-muted">No Projects Found</h4>
+                <p class="text-muted">
+                    {% if search_query %}
+                        No projects match your search criteria.
+                        <a href="{% url 'project_list' %}" class="btn btn-sm btn-outline-primary">Clear Search</a>
+                    {% elif user.is_super_admin %}
+                        Start by creating your first project.
+                        <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">Create Project</a>
+                    {% else %}
+                        You don't have any assigned projects yet.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}

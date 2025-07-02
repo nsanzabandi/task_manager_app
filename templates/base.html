@@ -43,6 +43,53 @@
         .dropdown-menu { border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: 10px; }
         .public-content { min-height: calc(100vh - 56px); display: flex; align-items: center; justify-content: center; flex-direction: column; }
         .welcome-card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
+        .user-avatar {
+            background: var(--primary-color);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        /* Enhanced message styling for forms */
+        .form-messages {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-messages .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        
+        .alert-error, .alert-danger {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .alert-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .alert-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
     </style>
 </head>
 <body>
@@ -81,10 +128,16 @@
                         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'task_list' %}active{% endif %}" href="{% url 'task_list' %}"><i class="bi bi-list-task"></i> Tasks</a></li>
                         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'task_create' %}active{% endif %}" href="{% url 'task_create' %}"><i class="bi bi-plus-circle"></i> Create Task</a></li>
                         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><i class="bi bi-bar-chart"></i> Reports</a></li>
-                        {% if user.role == 'admin' or user.role == 'super_admin' %}
+                        
+                        <!-- FIXED: Changed from user.role comparison to user.is_admin method -->
+                        {% if user.is_admin %}
                         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}" href="{% url 'user_management' %}"><i class="bi bi-people"></i> Users</a></li>
                         {% endif %}
-                        {% if user.role == 'super_admin' %}
+                        
+                        <!-- FIXED: Changed from user.role comparison to user.is_super_admin method -->
+                        {% if user.is_super_admin %}
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}" href="{% url 'project_list' %}"><i class="bi bi-folder"></i> Projects</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'project_create' %}active{% endif %}" href="{% url 'project_create' %}"><i class="bi bi-folder-plus"></i> Create Project</a></li>
                         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'division_list' %}active{% endif %}" href="{% url 'division_list' %}"><i class="bi bi-diagram-3"></i> View Divisions</a></li>
                         {% endif %}
                     </ul>
@@ -96,6 +149,18 @@
         <div class="col-12">
         {% endif %}
         <main class="py-4">
+            <!-- Global messages (only for non-form pages) -->
+            {% if messages and not show_messages_in_form %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
             {% block content %}
                 {% if not user.is_authenticated %}
                 <div class="public-content">
@@ -119,6 +184,22 @@
         </div>
     </div>
 </div>
+
+<!-- Template tag to include form messages -->
+{% block form_messages %}
+    {% if messages and show_messages_in_form %}
+        <div class="form-messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

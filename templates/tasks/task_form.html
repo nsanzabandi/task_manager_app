@@ -1,7 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-<script src="{% static 'ckeditor/ckeditor-init.js' %}"></script>
-<script src="{% static 'ckeditor/ckeditor/ckeditor.js' %}"></script>
 
 {{ form.media }}
 
@@ -9,13 +7,18 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-10">
         <div class="card">
             <div class="card-header">
                 <h4 class="mb-0">
                     <i class="bi bi-{% if task %}pencil{% else %}plus-circle{% endif %}"></i>
                     {{ title }}
                 </h4>
+                {% if project %}
+                    <small class="text-muted">
+                        {% if task %}Editing task in project: <strong>{{ project.title }}</strong>{% else %}Creating task in project: <strong>{{ project.title }}</strong>{% endif %}
+                    </small>
+                {% endif %}
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
@@ -25,7 +28,7 @@
                         <div class="col-md-8">
                             <div class="mb-3">
                                 <label for="{{ form.title.id_for_label }}" class="form-label">
-                                    <i class="bi bi-card-text"></i> Task Title *
+                                    <i class="bi bi-card-text"></i> Task Title <span class="text-danger">*</span>
                                 </label>
                                 {{ form.title }}
                                 {% if form.title.errors %}
@@ -37,7 +40,7 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="{{ form.priority.id_for_label }}" class="form-label">
-                                    <i class="bi bi-exclamation-triangle"></i> Priority *
+                                    <i class="bi bi-exclamation-triangle"></i> Priority <span class="text-danger">*</span>
                                 </label>
                                 {{ form.priority }}
                                 {% if form.priority.errors %}
@@ -49,7 +52,7 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.description.id_for_label }}" class="form-label">
-                            <i class="bi bi-file-text"></i> Description *
+                            <i class="bi bi-file-text"></i> Description <span class="text-danger">*</span>
                         </label>
                         {{ form.description }}
                         {% if form.description.errors %}
@@ -58,34 +61,88 @@
                         <div class="form-text">Provide a detailed description of the task.</div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="{{ form.assigned_to.id_for_label }}" class="form-label">
-                                    <i class="bi bi-person"></i> Assigned To *
-                                </label>
-                                {{ form.assigned_to }}
-                                {% if form.assigned_to.errors %}
-                                    <div class="text-danger small mt-1">{{ form.assigned_to.errors.0 }}</div>
-                                {% endif %}
+                    <!-- Multiple Assignees Section -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="bi bi-people"></i> Assign To <span class="text-danger">*</span>
+                        </label>
+                        <div class="form-text mb-3">
+                            Select one or more team members to work on this task. Multiple people can collaborate on the same task.
+                        </div>
+                        
+                        <!-- Quick Action Buttons -->
+                        <div class="mb-3">
+                            <button type="button" id="selectAllBtn" class="btn btn-sm btn-outline-primary me-2">
+                                <i class="bi bi-check-all"></i> Select All
+                            </button>
+                            <button type="button" id="clearAllBtn" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-x-square"></i> Clear All
+                            </button>
+                        </div>
+                        
+                        <!-- Assignees Grid -->
+                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                            <div class="row">
+                                {% for choice in form.assigned_to %}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check">
+                                        {{ choice.tag }}
+                                        <label class="form-check-label d-flex align-items-center" for="{{ choice.id_for_label }}">
+                                            <div class="user-avatar me-2">
+                                                {{ choice.choice_label.0|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">{{ choice.choice_label }}</div>
+                                                <small class="text-muted">Team Member</small>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <!-- Selected Count Display -->
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <span id="selectedCount">0</span> member(s) selected
+                            </small>
+                        </div>
+                        
+                        {% if form.assigned_to.errors %}
+                            <div class="text-danger small mt-1">{{ form.assigned_to.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Status Field - Show for existing tasks, hide for new tasks -->
+                        {% if task %}
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="{{ form.status.id_for_label }}" class="form-label">
-                                    <i class="bi bi-flag"></i> Status *
+                                    <i class="bi bi-flag"></i> Status <span class="text-danger">*</span>
                                 </label>
                                 {{ form.status }}
                                 {% if form.status.errors %}
                                     <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
                                 {% endif %}
+                                <div class="form-text">Current status of the task.</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="row">
+                        {% else %}
+                        <!-- Hidden status field for new tasks (will be set to 'pending') -->
+                        {{ form.status }}
                         <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <small><strong>Status:</strong> New tasks automatically start with "Pending" status. You can update the status after creation.</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-md-{% if task %}4{% else %}6{% endif %}">
                             <div class="mb-3">
                                 <label for="{{ form.due_date.id_for_label }}" class="form-label">
                                     <i class="bi bi-calendar"></i> Due Date
@@ -98,7 +155,7 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <div class="col-md-{% if task %}4{% else %}6{% endif %}">
                             <div class="mb-3">
                                 <label for="{{ form.estimated_hours.id_for_label }}" class="form-label">
                                     <i class="bi bi-clock"></i> Estimated Hours
@@ -112,6 +169,24 @@
                         </div>
                     </div>
                     
+                    <!-- Project Field (if applicable) -->
+                    {% if form.project and form.project.field.widget.input_type != 'hidden' %}
+                    <div class="mb-3">
+                        <label for="{{ form.project.id_for_label }}" class="form-label">
+                            <i class="bi bi-folder"></i> Project
+                        </label>
+                        {{ form.project }}
+                        {% if form.project.errors %}
+                            <div class="text-danger small mt-1">{{ form.project.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Hidden Fields (Project and Status for new tasks) -->
+                    {% if form.project and form.project.field.widget.input_type == 'hidden' %}
+                        {{ form.project }}
+                    {% endif %}
+                    
                     {% if form.non_field_errors %}
                         <div class="alert alert-danger">
                             {{ form.non_field_errors }}
@@ -120,9 +195,19 @@
                     
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <div>
-                            <a href="{% if task %}{% url 'task_detail' task.id %}{% else %}{% url 'task_list' %}{% endif %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Cancel
-                            </a>
+                            {% if project %}
+                                <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Back to Project
+                                </a>
+                            {% elif task %}
+                                <a href="{% url 'task_detail' task.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Cancel
+                                </a>
+                            {% endif %}
                         </div>
                         <div>
                             <button type="submit" class="btn btn-primary">
@@ -144,7 +229,7 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <h6><i class="bi bi-check-circle text-success"></i> Best Practices</h6>
                         <ul class="list-unstyled small">
                             <li><i class="bi bi-dot"></i> Use clear and descriptive titles</li>
@@ -153,13 +238,22 @@
                             <li><i class="bi bi-dot"></i> Assign appropriate priority levels</li>
                         </ul>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <h6><i class="bi bi-info-circle text-info"></i> Priority Levels</h6>
                         <ul class="list-unstyled small">
                             <li><span class="badge bg-success">Low</span> - Can be done later</li>
                             <li><span class="badge bg-warning">Medium</span> - Normal priority</li>
                             <li><span class="badge bg-danger">High</span> - Important task</li>
                             <li><span class="badge bg-dark">Urgent</span> - Needs immediate attention</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-people text-primary"></i> Team Collaboration</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-dot"></i> Multiple people can work together</li>
+                            <li><i class="bi bi-dot"></i> All assignees can update status</li>
+                            <li><i class="bi bi-dot"></i> Comments are shared with team</li>
+                            <li><i class="bi bi-dot"></i> Progress is tracked collectively</li>
                         </ul>
                     </div>
                 </div>
@@ -169,42 +263,226 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+.user-avatar {
+    background: #4f46e5;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.form-check-input:checked + .form-check-label .user-avatar {
+    background: #22c55e;
+}
+
+.form-check {
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.form-check:hover {
+    background-color: rgba(79, 70, 229, 0.1);
+}
+
+.alert-info {
+    background-color: #e0f2fe;
+    border-color: #81d4fa;
+    color: #01579b;
+}
+</style>
+{% endblock %}
+
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Form validation
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const title = document.getElementById('{{ form.title.id_for_label }}').value.trim();
-        const description = document.getElementById('{{ form.description.id_for_label }}').value.trim();
-        const assignedTo = document.getElementById('{{ form.assigned_to.id_for_label }}').value;
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize TinyMCE with correct CDN base URL
+    tinymce.init({
+        selector: 'textarea[name="description"]',
+        height: 400,
         
-        if (!title) {
-            e.preventDefault();
-            showError('Please enter a task title.');
-            return;
+        // CRITICAL: Set the base URL to prevent 404 errors
+        base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6',
+        suffix: '.min',
+        
+        menubar: 'file edit view insert format tools table help',
+        plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'help', 'wordcount'
+        ],
+        toolbar: 'undo redo | blocks fontfamily fontsize | ' +
+        'bold italic underline strikethrough | forecolor backcolor | ' +
+        'alignleft aligncenter alignright alignjustify | ' +
+        'bullist numlist outdent indent | removeformat | ' +
+        'table link image | code fullscreen | help',
+        
+        content_style: `
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                font-size: 14px; 
+                line-height: 1.6; 
+                margin: 10px; 
+            }
+            p { margin: 0 0 10px 0; }
+            h1, h2, h3, h4, h5, h6 { margin: 15px 0 10px 0; font-weight: bold; }
+            ul, ol { margin: 0 0 10px 20px; }
+            table { border-collapse: collapse; width: 100%; }
+            table td, table th { border: 1px solid #ddd; padding: 8px; }
+        `,
+        
+        // Remove branding and promotional content
+        branding: false,
+        promotion: false,
+        
+        // Better user experience
+        resize: true,
+        statusbar: true,
+        elementpath: true,
+        
+        // Auto-save content to textarea
+        setup: function (editor) {
+            editor.on('change keyup setContent', function () {
+                editor.save();
+            });
+            
+            editor.on('init', function() {
+                console.log('TinyMCE initialized successfully!');
+            });
+        },
+        
+        // Paste settings
+        paste_as_text: false,
+        paste_auto_cleanup_on_paste: true,
+        
+        // Image handling
+        image_advtab: true,
+        image_caption: true,
+        
+        // Link handling
+        link_assume_external_targets: true,
+        link_context_toolbar: true,
+        
+        // Table settings - REMOVED deprecated options
+        table_default_attributes: {
+            border: '1'
+        },
+        table_default_styles: {
+            'border-collapse': 'collapse'
+        },
+        
+        // Font options
+        font_family_formats: 'Arial=arial,helvetica,sans-serif; Times New Roman=times new roman,times,serif; Courier New=courier new,courier,monospace; Helvetica=helvetica; Verdana=verdana;',
+        font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 20pt 24pt 36pt 48pt',
+        
+        // Error handling
+        init_instance_callback: function (editor) {
+            console.log('TinyMCE editor with ID: ' + editor.id + ' has been initialized.');
         }
-        
-        if (!description) {
-            e.preventDefault();
-            showError('Please enter a task description.');
-            return;
-        }
-        
-        if (!assignedTo) {
-            e.preventDefault();
-            showError('Please select who this task is assigned to.');
-            return;
-        }
-        
-        // Show loading
-        showLoading('{% if task %}Updating{% else %}Creating{% endif %} task...');
     });
-    
-    // Auto-resize textarea
-    const textarea = document.getElementById('{{ form.description.id_for_label }}');
-    if (textarea) {
-        textarea.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+
+    // Get all assignee checkboxes
+    const assigneeCheckboxes = document.querySelectorAll('input[name="assigned_to"]');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+
+    // Update selected count
+    function updateSelectedCount() {
+        const checkedCount = document.querySelectorAll('input[name="assigned_to"]:checked').length;
+        selectedCountSpan.textContent = checkedCount;
+        
+        // Update button states
+        if (checkedCount === assigneeCheckboxes.length && assigneeCheckboxes.length > 0) {
+            selectAllBtn.textContent = '✓ All Selected';
+            selectAllBtn.classList.add('btn-success');
+            selectAllBtn.classList.remove('btn-outline-primary');
+        } else {
+            selectAllBtn.innerHTML = '<i class="bi bi-check-all"></i> Select All';
+            selectAllBtn.classList.remove('btn-success');
+            selectAllBtn.classList.add('btn-outline-primary');
+        }
+    }
+
+    // Select All functionality
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            const allSelected = document.querySelectorAll('input[name="assigned_to"]:checked').length === assigneeCheckboxes.length;
+            
+            assigneeCheckboxes.forEach(checkbox => {
+                checkbox.checked = !allSelected;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    // Clear All functionality
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', function() {
+            assigneeCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    // Listen for individual checkbox changes
+    assigneeCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Initial count update
+    updateSelectedCount();
+
+    // Form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const titleField = document.getElementById('{{ form.title.id_for_label }}');
+            
+            if (!titleField) {
+                console.log('Form fields not found');
+                return;
+            }
+            
+            const title = titleField.value.trim();
+            const assignedCount = document.querySelectorAll('input[name="assigned_to"]:checked').length;
+            
+            // Get description from TinyMCE - improved validation
+            const description = tinymce.get('{{ form.description.id_for_label }}') ? 
+                              tinymce.get('{{ form.description.id_for_label }}').getContent().trim() : '';
+            
+            if (!title) {
+                e.preventDefault();
+                showError('Please enter a task title.');
+                return;
+            }
+            
+            // Better description validation for TinyMCE
+            if (!description || description === '<p></p>' || description === '<p><br></p>' || description === '' || description === '<p>&nbsp;</p>') {
+                e.preventDefault();
+                showError('Please enter a task description.');
+                return;
+            }
+            
+            if (assignedCount === 0) {
+                e.preventDefault();
+                showError('Please select at least one person to assign this task to.');
+                return;
+            }
+            
+            // Show loading
+            showLoading('{% if task %}Updating{% else %}Creating{% endif %} task...');
         });
     }
     
@@ -258,6 +536,34 @@
             }
         });
     }
+});
+
+// Utility functions
+function showError(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Validation Error',
+            text: message,
+            icon: 'error',
+            confirmButtonColor: '#4f46e5'
+        });
+    } else {
+        alert(message);
+    }
+}
+
+function showLoading(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: message,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+}
 </script>
 {% endblock %}
-

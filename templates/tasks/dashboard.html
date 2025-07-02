@@ -6,12 +6,26 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h2 mb-0">Dashboard</h1>
-        <p class="text-muted">Welcome back, {{ user.first_name }}! Here's your task overview.</p>
+        <p class="text-muted">
+            Welcome back, {{ user.first_name }}! 
+            {% if user.is_super_admin %}
+                You have full system access.
+            {% elif user.is_admin %}
+                Managing {{ user.division.name|default:"your division" }}.
+            {% else %}
+                Here's your task overview.
+            {% endif %}
+        </p>
     </div>
     <div>
         <a href="{% url 'task_create' %}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> New Task
         </a>
+        {% if user.is_super_admin %}
+        <a href="{% url 'project_create' %}" class="btn btn-outline-primary ms-2">
+            <i class="bi bi-folder-plus"></i> New Project
+        </a>
+        {% endif %}
     </div>
 </div>
 
@@ -21,7 +35,9 @@
         <div class="card stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             <div class="card-body text-center">
                 <div class="stats-number">{{ total_tasks }}</div>
-                <div class="stats-label">Total Tasks</div>
+                <div class="stats-label">
+                    {% if user.is_admin %}All Tasks{% else %}My Tasks{% endif %}
+                </div>
                 <i class="bi bi-list-task" style="font-size: 2rem; opacity: 0.7;"></i>
             </div>
         </div>
@@ -62,19 +78,26 @@
 <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     <div>
-        <strong>Attention!</strong> You have {{ overdue_tasks }} overdue task{{ overdue_tasks|pluralize }}.
+        <strong>Attention!</strong> 
+        {% if user.is_admin %}
+            There are {{ overdue_tasks }} overdue task{{ overdue_tasks|pluralize }} in your division.
+        {% else %}
+            You have {{ overdue_tasks }} overdue task{{ overdue_tasks|pluralize }}.
+        {% endif %}
         <a href="{% url 'task_list' %}?status=pending" class="alert-link">View overdue tasks</a>
     </div>
 </div>
 {% endif %}
 
 <div class="row">
-    <!-- Recent Tasks -->
+    <!-- Left Column: Tasks -->
     <div class="col-lg-8 mb-4">
-        <div class="card">
+        <!-- Recent Tasks -->
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="bi bi-clock-history"></i> Recent Tasks
+                    <i class="bi bi-clock-history"></i> 
+                    {% if user.is_admin %}Recent Tasks in Your Division{% else %}Your Recent Tasks{% endif %}
                 </h5>
                 <a href="{% url 'task_list' %}" class="btn btn-sm btn-outline-light">View All</a>
             </div>
@@ -88,29 +111,40 @@
                                     <a href="{% url 'task_detail' task.id %}" class="text-decoration-none">
                                         {{ task.title }}
                                     </a>
+                                    {% if task.project %}
+                                        <small class="text-muted">in <a href="{% url 'project_detail' task.project.id %}" class="text-decoration-none">{{ task.project.title }}</a></small>
+                                    {% endif %}
                                 </h6>
                                 <div class="task-desc-preview" style="max-height: 70px; overflow-y: auto;">
                                     {{ task.description|truncatewords_html:25|safe }}
                                 </div>
-                                <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center gap-3 mt-2">
                                     <span class="status-badge status-{{ task.status }}">
                                         {{ task.get_status_display }}
                                     </span>
                                     <small class="text-muted">
-                                        <i class="bi bi-person"></i> {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}
+                                        <i class="bi bi-people"></i> {{ task.get_assignees_display }}
                                     </small>
                                     <small class="text-muted">
                                         <i class="bi bi-calendar"></i> {{ task.created_at|date:"M d, Y" }}
                                     </small>
                                     {% if task.due_date %}
-                                    <small class="text-muted">
+                                    <small class="text-muted {% if task.is_overdue %}text-danger{% endif %}">
                                         <i class="bi bi-alarm"></i> Due: {{ task.due_date|date:"M d, Y" }}
+                                        {% if task.is_overdue %}<strong>(Overdue)</strong>{% endif %}
                                     </small>
                                     {% endif %}
                                 </div>
                             </div>
                             <div class="ms-3">
                                 <span class="badge bg-secondary">{{ task.get_priority_display }}</span>
+                                {% with assignee_count=task.assigned_to.count %}
+                                {% if assignee_count > 0 %}
+                                <br><small class="text-muted mt-1">
+                                    <i class="bi bi-person-check"></i> {{ assignee_count }} assignee{{ assignee_count|pluralize }}
+                                </small>
+                                {% endif %}
+                                {% endwith %}
                             </div>
                         </div>
                     </div>
@@ -124,14 +158,72 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Projects Section for Admins -->
+        {% if user.is_admin %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-folder"></i> 
+                    {% if user.is_super_admin %}All Projects{% else %}My Projects{% endif %}
+                </h5>
+                <a href="{% url 'project_list' %}" class="btn btn-sm btn-outline-light">View All</a>
+            </div>
+            <div class="card-body">
+                {% if managed_projects %}
+                    {% for project in managed_projects %}
+                    <div class="d-flex align-items-center mb-3 p-3 border rounded">
+                        <div class="me-3">
+                            <div class="project-avatar" style="width: 40px; height: 40px; background: linear-gradient(45deg, #4f46e5, #7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                {{ project.title.0|upper }}
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
+                                    {{ project.title }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">
+                                {{ project.get_task_count }} tasks • 
+                                {{ project.get_progress_percentage }}% complete • 
+                                {{ project.division.name }}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ project.get_status_badge_class|slice:"3:" }}">
+                                {{ project.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="bi bi-folder-plus" style="font-size: 2rem; color: #e5e7eb;"></i>
+                        <p class="text-muted mt-2 small">
+                            {% if user.is_super_admin %}
+                                No projects yet. Create your first project!
+                            {% else %}
+                                No projects assigned to you.
+                            {% endif %}
+                        </p>
+                        {% if user.is_super_admin %}
+                        <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">Create Project</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
     
-    <!-- My Tasks -->
+    <!-- Right Column: My Tasks & Quick Actions -->
     <div class="col-lg-4 mb-4">
-        <div class="card">
+        <!-- My Personal Tasks (for all users) -->
+        <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-person-check"></i> My Tasks
+                    <i class="bi bi-person-check"></i> My Assigned Tasks
                 </h5>
             </div>
             <div class="card-body">
@@ -147,11 +239,25 @@
                                     {{ task.title|truncatechars:30 }}
                                 </a>
                             </h6>
-                            <small class="text-muted">{{ task.created_at|timesince }} ago</small>
+                            <small class="text-muted">
+                                {{ task.created_at|timesince }} ago
+                                {% if task.project %}
+                                • in {{ task.project.title|truncatechars:20 }}
+                                {% endif %}
+                            </small>
+                            {% with assignee_count=task.assigned_to.count %}
+                            {% if assignee_count > 1 %}
+                            <br><small class="text-info">
+                                <i class="bi bi-people-fill"></i> Team task ({{ assignee_count }} members)
+                            </small>
+                            {% endif %}
+                            {% endwith %}
                         </div>
-                        <span class="status-badge status-{{ task.status }} small">
-                            {{ task.get_status_display }}
-                        </span>
+                        <div class="text-end">
+                            <span class="status-badge status-{{ task.status }} small">
+                                {{ task.get_status_display }}
+                            </span>
+                        </div>
                     </div>
                     {% endfor %}
                     <div class="text-center mt-3">
@@ -167,7 +273,7 @@
         </div>
         
         <!-- Quick Actions -->
-        <div class="card mt-4">
+        <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-lightning"></i> Quick Actions
@@ -186,19 +292,31 @@
                         <i class="bi bi-people"></i> Manage Users
                     </a>
                     {% endif %}
+                    {% if user.is_super_admin %}
+                    <a href="{% url 'project_list' %}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-folder"></i> All Projects
+                    </a>
+                    <a href="{% url 'division_list' %}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-diagram-3"></i> Divisions
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'reports' %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-bar-chart"></i> Reports
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Task Status Chart (Placeholder for future enhancement) -->
+<!-- Task Status Chart -->
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-bar-chart"></i> Task Distribution
+                    {% if user.is_admin %}({{ user.division.name|default:"Your Division" }}){% endif %}
                 </h5>
             </div>
             <div class="card-body">
@@ -242,14 +360,86 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+.stats-card {
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.stats-label {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    opacity: 0.9;
+}
+
+.task-item {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+}
+
+.task-item:hover {
+    background-color: rgba(79, 70, 229, 0.05);
+    border-left: 4px solid var(--primary-color) !important;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-pending { background-color: #fef3c7; color: #92400e; }
+.status-in_progress { background-color: #dbeafe; color: #1e40af; }
+.status-review { background-color: #f3e8ff; color: #7c3aed; }
+.status-completed { background-color: #d1fae5; color: #065f46; }
+.status-cancelled { background-color: #fee2e2; color: #dc2626; }
+.status-blocked { background-color: #fecaca; color: #dc2626; }
+
+.priority-urgent { border-left: 4px solid #dc2626; }
+.priority-high { border-left: 4px solid #ea580c; }
+.priority-medium { border-left: 4px solid #d97706; }
+.priority-low { border-left: 4px solid #65a30d; }
+
+.user-avatar {
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.project-avatar {
+    background: linear-gradient(45deg, #4f46e5, #7c3aed);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
-    // Auto-refresh dashboard every 5 minutes
+    // Auto-refresh dashboard every 10 minutes
     setTimeout(function() {
         location.reload();
-    }, 300000);
+    }, 600000);
     
-    // Add some interactive effects
+    // Add interactive effects
     document.querySelectorAll('.stats-card').forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.transform = 'translateY(-5px) scale(1.02)';
@@ -261,4 +451,3 @@
     });
 </script>
 {% endblock %}
-

@@ -9,7 +9,8 @@
         <p class="text-muted">Generate comprehensive reports and export data</p>
     </div>
     <div class="btn-group">
-        <a href="{% url 'export_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success">
+        <!-- FIXED: Correct URL names -->
+        <a href="{% url 'export_tasks_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success">
             <i class="bi bi-file-earmark-excel"></i> Export Excel
         </a>
         <a href="{% url 'export_tasks_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">
@@ -38,48 +39,61 @@
             </div>
             
             <div class="col-md-2">
-                <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">All Statuses</option>
-                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
-                    <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-                </select>
+                <label class="form-label">Status</label>
+                <div class="form-check-container">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" value="pending" id="status_pending"
+                               {% if 'pending' in selected_statuses %}checked{% endif %}>
+                        <label class="form-check-label" for="status_pending">Pending</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" value="in_progress" id="status_in_progress"
+                               {% if 'in_progress' in selected_statuses %}checked{% endif %}>
+                        <label class="form-check-label" for="status_in_progress">In Progress</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" value="completed" id="status_completed"
+                               {% if 'completed' in selected_statuses %}checked{% endif %}>
+                        <label class="form-check-label" for="status_completed">Completed</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" value="cancelled" id="status_cancelled"
+                               {% if 'cancelled' in selected_statuses %}checked{% endif %}>
+                        <label class="form-check-label" for="status_cancelled">Cancelled</label>
+                    </div>
+                </div>
             </div>
             
+            <!-- CHANGED: Replaced priority with project filter -->
             <div class="col-md-2">
-                <label for="priority" class="form-label">Priority</label>
-                <select class="form-select" id="priority" name="priority">
-                    <option value="">All Priorities</option>
-                    <option value="low" {% if selected_priority == 'low' %}selected{% endif %}>Low</option>
-                    <option value="medium" {% if selected_priority == 'medium' %}selected{% endif %}>Medium</option>
-                    <option value="high" {% if selected_priority == 'high' %}selected{% endif %}>High</option>
-                    <option value="urgent" {% if selected_priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                <label for="project" class="form-label">Project</label>
+                <select class="form-select" id="project" name="project">
+                    <option value="">All Projects</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}" {% if selected_project == project.id|stringformat:"s" %}selected{% endif %}>
+                        {{ project.title }}
+                    </option>
+                    {% endfor %}
+                    <option value="no_project" {% if selected_project == 'no_project' %}selected{% endif %}>
+                        Individual Tasks
+                    </option>
                 </select>
             </div>
             
+            <!-- FIXED: Added proper division filter -->
             <div class="col-md-2">
                 <label for="division" class="form-label">Division</label>
                 <select class="form-select" id="division" name="division">
                     <option value="">All Divisions</option>
-                    {% for div in divisions %}
-                    <option value="{{ div.id }}" {% if selected_division == div.id|stringformat:"s" %}selected{% endif %}>{{ div.name }}</option>
+                    {% for division in divisions %}
+                    <option value="{{ division.id }}" {% if selected_division == division.id|stringformat:"s" %}selected{% endif %}>
+                        {{ division.name }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
             
-            <div class="col-md-3">
-                <label for="assigned_to" class="form-label">Assigned To</label>
-                <select class="form-select" id="assigned_to" name="assigned_to">
-                    <option value="">All Users</option>
-                    {% for user in users %}
-                    <option value="{{ user.id }}" {% if selected_assigned_to == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-9 d-flex align-items-end">
+            <div class="col-md-12 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="bi bi-search"></i> Apply Filters
                 </button>
@@ -98,7 +112,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ total_tasks }}</h3>
+                        <h3 class="mb-0">{{ total_tasks|default:0 }}</h3>
                         <p class="mb-0">Total Tasks</p>
                     </div>
                     <div class="fs-1">
@@ -114,7 +128,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ completed_tasks }}</h3>
+                        <h3 class="mb-0">{{ completed_tasks|default:0 }}</h3>
                         <p class="mb-0">Completed</p>
                     </div>
                     <div class="fs-1">
@@ -130,7 +144,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ in_progress_tasks }}</h3>
+                        <h3 class="mb-0">{{ in_progress_tasks|default:0 }}</h3>
                         <p class="mb-0">In Progress</p>
                     </div>
                     <div class="fs-1">
@@ -146,7 +160,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="mb-0">{{ overdue_tasks }}</h3>
+                        <h3 class="mb-0">{{ overdue_tasks|default:0 }}</h3>
                         <p class="mb-0">Overdue</p>
                     </div>
                     <div class="fs-1">
@@ -192,25 +206,24 @@
         </div>
     </div>
     
+    <!-- CHANGED: Replaced priority distribution with project distribution -->
     <div class="col-lg-4 mb-3">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-bar-chart"></i> Priority Distribution
+                    <i class="bi bi-diagram-3"></i> Project Distribution
                 </h5>
             </div>
             <div class="card-body">
-                {% if priority_stats %}
-                    {% for stat in priority_stats %}
+                {% if project_stats %}
+                    {% for stat in project_stats %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-capitalize">{{ stat.priority|default:"Unknown" }}</span>
+                        <span class="text-truncate" title="{{ stat.project__title|default:'No Project' }}">
+                            {{ stat.project__title|default:"No Project"|truncatechars:20 }}
+                        </span>
                         <div class="d-flex align-items-center">
                             <div class="progress me-2" style="width: 100px; height: 8px;">
-                                <div class="progress-bar 
-                                    {% if stat.priority == 'urgent' %}bg-danger
-                                    {% elif stat.priority == 'high' %}bg-warning
-                                    {% elif stat.priority == 'medium' %}bg-info
-                                    {% else %}bg-secondary{% endif %}" 
+                                <div class="progress-bar bg-primary" 
                                     style="width: {% if total_tasks > 0 %}{% widthratio stat.count total_tasks 100 %}{% else %}0{% endif %}%"></div>
                             </div>
                             <span class="badge bg-secondary">{{ stat.count }}</span>
@@ -299,11 +312,11 @@
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-6">
-                        <h4 class="text-info">{{ recent_tasks_count }}</h4>
+                        <h4 class="text-info">{{ recent_tasks_count|default:0 }}</h4>
                         <p class="text-muted mb-0">Tasks (Last 30 Days)</p>
                     </div>
                     <div class="col-6">
-                        <h4 class="text-warning">{{ pending_tasks }}</h4>
+                        <h4 class="text-warning">{{ pending_tasks|default:0 }}</h4>
                         <p class="text-muted mb-0">Pending Tasks</p>
                     </div>
                 </div>
@@ -330,10 +343,10 @@
                         <tr>
                             <th>Task</th>
                             <th>Status</th>
-                            <th>Priority</th>
+                            <th>Project</th>
                             <th>Assigned To</th>
                             <th>Due Date</th>
-                            <th>Created</th>
+                            <th>Comments</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -358,29 +371,55 @@
                                     {{ task.get_status_display }}
                                 </span>
                             </td>
+                            <!-- ADDED: Project column -->
                             <td>
-                                <span class="badge 
-                                    {% if task.priority == 'urgent' %}bg-danger
-                                    {% elif task.priority == 'high' %}bg-warning
-                                    {% elif task.priority == 'medium' %}bg-info
-                                    {% else %}bg-secondary{% endif %}">
-                                    {{ task.get_priority_display }}
-                                </span>
+                                {% if task.project %}
+                                    <a href="{% url 'project_detail' task.project.id %}" class="text-decoration-none">
+                                        {{ task.project.title|truncatechars:30 }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Individual Task</span>
+                                {% endif %}
                             </td>
                             <td>
-                                {% if task.assigned_to %}
-                                    <div class="d-flex align-items-center">
-                                        <div class="user-avatar me-2">
-                                            {{ task.assigned_to.first_name.0|default:task.assigned_to.username.0|upper }}
-                                        </div>
-                                        <div>
-                                            <div class="small">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</div>
-                                            <div class="text-muted small">{{ task.assigned_to.division.name|default:"No Division" }}</div>
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">Unassigned</span>
-                                {% endif %}
+                                <!-- FIXED: Proper M2M field handling -->
+                                {% with assignees=task.assigned_to.all %}
+                                    {% if assignees.exists %}
+                                        {% if assignees.count == 1 %}
+                                            {% with assignee=assignees.first %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar me-2">
+                                                    {{ assignee.first_name.0|default:assignee.username.0|upper }}
+                                                </div>
+                                                <div>
+                                                    <div class="small">{{ assignee.get_full_name|default:assignee.username }}</div>
+                                                    <div class="text-muted small">{{ assignee.division.name|default:"No Division" }}</div>
+                                                </div>
+                                            </div>
+                                            {% endwith %}
+                                        {% else %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar-group me-2">
+                                                    {% for assignee in assignees|slice:":2" %}
+                                                    <div class="user-avatar" style="width: 20px; height: 20px; font-size: 0.7rem;" title="{{ assignee.get_display_name }}">
+                                                        {{ assignee.first_name.0|default:assignee.username.0|upper }}
+                                                    </div>
+                                                    {% endfor %}
+                                                    {% if assignees.count > 2 %}
+                                                    <div class="user-avatar-more" style="width: 20px; height: 20px; font-size: 0.6rem;">
+                                                        +{{ assignees.count|add:"-2" }}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <div class="small">{{ assignees.count }} members</div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                {% endwith %}
                             </td>
                             <td>
                                 {% if task.due_date %}
@@ -391,8 +430,17 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="small">{{ task.created_at|date:"M d, Y" }}</div>
-                                <div class="text-muted small">{{ task.created_at|timesince }} ago</div>
+                                {% if task.status == 'in_progress' and task.latest_comment %}
+                                    <div class="comment-preview">
+                                        <small class="text-muted">{{ task.latest_comment.user.get_full_name|default:task.latest_comment.user.username }}:</small>
+                                        <div class="small">{{ task.latest_comment.content|striptags|truncatechars:80 }}</div>
+                                        <small class="text-muted">{{ task.latest_comment.created_at|timesince }} ago</small>
+                                    </div>
+                                {% elif task.status == 'in_progress' %}
+                                    <span class="text-muted small">No comments yet</span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -410,11 +458,74 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+.user-avatar {
+    background: #4f46e5;
+    color: white;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.7rem;
+    margin-right: 2px;
+}
+
+.user-avatar-group {
+    display: flex;
+    align-items: center;
+}
+
+.user-avatar-more {
+    background: #6c757d;
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.form-check-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-check {
+    margin-bottom: 0;
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+.comment-preview {
+    max-width: 250px;
+    background-color: #f8f9fa;
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
     // Auto-submit form when filters change
-    document.querySelectorAll('#status, #priority, #division, #assigned_to').forEach(function(select) {
+    document.querySelectorAll('#project, #division').forEach(function(select) {
         select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Auto-submit form when status checkboxes change
+    document.querySelectorAll('input[name="status"]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
             this.form.submit();
         });
     });
@@ -425,7 +536,7 @@
         const dateTo = new Date(document.getElementById('date_to').value);
         
         if (dateTo && dateFrom > dateTo) {
-            showError('From date cannot be later than To date.');
+            alert('From date cannot be later than To date.');
             this.value = '';
         }
     });
@@ -435,41 +546,9 @@
         const dateTo = new Date(this.value);
         
         if (dateFrom && dateTo < dateFrom) {
-            showError('To date cannot be earlier than From date.');
+            alert('To date cannot be earlier than From date.');
             this.value = '';
         }
     });
-    
-    // Export confirmation
-    document.querySelectorAll('a[href*="export"]').forEach(function(link) {
-        link.addEventListener('click', function(e) {
-            showLoading('Generating report...');
-            
-            // Hide loading after a delay (file download doesn't trigger page reload)
-            setTimeout(() => {
-                Swal.close();
-            }, 3000);
-        });
-    });
-    
-    // Quick filter buttons
-    function applyQuickFilter(filterType, value) {
-        const form = document.querySelector('form');
-        const input = form.querySelector(`[name="${filterType}"]`);
-        if (input) {
-            input.value = value;
-            form.submit();
-        }
-    }
-    
-    // Add quick filter buttons for common date ranges
-    function addQuickDateFilters() {
-        const today = new Date();
-        const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-        
-        // This would be implemented with additional UI elements
-    }
 </script>
 {% endblock %}
-

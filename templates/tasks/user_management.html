@@ -3,6 +3,9 @@
 {% block title %}User Management - Task Manager{% endblock %}
 
 {% block content %}
+<!-- Message Container for Dynamic Alerts -->
+<div id="message-container" class="mb-3"></div>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h2 mb-0">User Management</h1>
@@ -80,7 +83,7 @@
                         </thead>
                         <tbody>
                             {% for user_item in page_obj %}
-                            <tr>
+                            <tr id="user-row-{{ user_item.id }}">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="user-avatar me-3">
@@ -121,11 +124,9 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if user_item.is_active %}
-                                        <span class="badge bg-success">Active</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Inactive</span>
-                                    {% endif %}
+                                    <span class="badge bg-{% if user_item.is_active %}success{% else %}danger{% endif %}" id="status-badge-{{ user_item.id }}">
+                                        {% if user_item.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
                                 </td>
                                 <td>
                                     <div class="small">{{ user_item.date_joined|date:"M d, Y" }}</div>
@@ -140,10 +141,19 @@
                                             <i class="bi bi-list-task"></i>
                                         </a>
                                         {% if user_item != user %}
-                                        <button class="btn btn-outline-danger btn-sm" title="Toggle Status" 
-                                                onclick="toggleUserStatus({{ user_item.id }}, '{{ user_item.username }}', {{ user_item.is_active|yesno:'true,false' }})">
-                                            <i class="bi bi-{% if user_item.is_active %}pause{% else %}play{% endif %}"></i>
+                                        <button class="btn btn-outline-{% if user_item.is_active %}warning{% else %}success{% endif %} btn-sm" 
+                                                title="{% if user_item.is_active %}Deactivate{% else %}Activate{% endif %} User" 
+                                                id="toggle-btn-{{ user_item.id }}"
+                                                onclick="toggleUserStatus({{ user_item.id }}, '{{ user_item.username }}', {{ user_item.is_active|yesno:'true,false' }}, '{{ user_item.get_full_name|default:user_item.username }}')">
+                                            <i class="bi bi-{% if user_item.is_active %}pause{% else %}play{% endif %}" id="toggle-icon-{{ user_item.id }}"></i>
                                         </button>
+                                        {% if user.is_super_admin %}
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                title="Delete User" 
+                                                onclick="deleteUser({{ user_item.id }}, '{{ user_item.username }}', '{{ user_item.get_full_name|default:user_item.username }}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
                                         {% endif %}
                                     </div>
                                 </td>
@@ -177,11 +187,9 @@
                                         <span class="badge bg-secondary">User</span>
                                     {% endif %}
                                     
-                                    {% if user_item.is_active %}
-                                        <span class="badge bg-success">Active</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Inactive</span>
-                                    {% endif %}
+                                    <span class="badge bg-{% if user_item.is_active %}success{% else %}danger{% endif %}">
+                                        {% if user_item.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
                                 </div>
                                 
                                 <div class="small text-muted mb-3">
@@ -283,10 +291,110 @@
         </div>
     </div>
 </div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Styles -->
+<style>
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+#message-container {
+    position: sticky;
+    top: 20px;
+    z-index: 1050;
+}
+
+#message-container .alert {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-weight: 500;
+}
+
+#message-container .alert-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    color: white;
+}
+
+#message-container .alert-danger {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    color: white;
+}
+
+#message-container .alert-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.alert .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+/* Animation for messages */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+#message-container .alert.show {
+    animation: slideInDown 0.3s ease-out;
+}
+
+/* Loading spinner improvements */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Modal improvements */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: 1.25rem;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    // FIXED: Define URLs as global variables so they work properly
+    const TOGGLE_USER_URL = "{% url 'toggle_user_status' 0 %}";
+    const DELETE_USER_URL = "{% url 'delete_user' 0 %}";
+    
     // View toggle functionality
     document.getElementById('table-view').addEventListener('change', function() {
         if (this.checked) {
@@ -311,49 +419,314 @@
         }, 500);
     });
     
-    // Toggle user status
-    function toggleUserStatus(userId, username, isActive) {
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Show loading overlay
+    function showLoading() {
+        document.getElementById('loading-overlay').style.display = 'block';
+    }
+    
+    // Hide loading overlay
+    function hideLoading() {
+        document.getElementById('loading-overlay').style.display = 'none';
+    }
+    
+    // Show success/error message - IMPROVED VERSION
+    function showMessage(message, type = 'success') {
+        // Remove any existing messages
+        const existingAlerts = document.querySelectorAll('#message-container .alert');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Create new alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.style.marginBottom = '1rem';
+        alertDiv.innerHTML = `
+            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        // Insert into message container
+        const messageContainer = document.getElementById('message-container');
+        messageContainer.appendChild(alertDiv);
+        
+        // Scroll to top to show the message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }
+        }, 5000);
+    }
+    
+    // Show confirmation dialog - IMPROVED WITH DYNAMIC MESSAGES
+    function showConfirmDialog(message, onConfirm, type = 'warning', confirmText = 'Confirm') {
+        // Create custom modal for better UX
+        const modalHtml = `
+            <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-${type === 'danger' ? 'exclamation-triangle' : 'question-circle'} text-${type} me-2"></i>
+                                ${type === 'danger' ? 'Confirm Deletion' : 'Confirm Action'}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-0">${message}</p>
+                            ${type === 'danger' ? '<p class="text-danger small mb-0 mt-2"><i class="bi bi-exclamation-triangle"></i> This action cannot be undone.</p>' : ''}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-${type}" id="confirmButton">${confirmText}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('confirmModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        modal.show();
+        
+        // Handle confirm button
+        document.getElementById('confirmButton').addEventListener('click', () => {
+            modal.hide();
+            onConfirm();
+        });
+        
+        // Clean up modal after hiding
+        document.getElementById('confirmModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('confirmModal').remove();
+        });
+    }
+    
+    // FIXED: Toggle user status function with proper URL handling
+    function toggleUserStatus(userId, username, isActive, displayName) {
+    console.log('Toggle called with:', { userId, username, isActive, displayName });
+    
     const action = isActive ? 'deactivate' : 'activate';
-    const message = `Are you sure you want to ${action} user "${username}"?`;
+    const actionCapital = isActive ? 'Deactivate' : 'Activate';
+    const message = `Are you sure you want to ${action} user "${displayName || username}"?`;
 
-    confirmAction(message, function () {
-        showLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}ing user...`);
+    showConfirmDialog(message, function() {
+        showLoading();
+        
+        const toggleBtn = document.getElementById(`toggle-btn-${userId}`);
+        if (!toggleBtn) {
+            hideLoading();
+            showMessage('Button not found. Please refresh the page.', 'danger');
+            return;
+        }
+        
+        const originalBtnContent = toggleBtn.innerHTML;
+        toggleBtn.disabled = true;
+        toggleBtn.innerHTML = '<i class="spinner-border spinner-border-sm"></i>';
 
-        fetch(`/users/${userId}/toggle-status/`, {
+        const toggleUrl = TOGGLE_USER_URL.replace('0', userId);
+        console.log('Making request to:', toggleUrl);
+
+        fetch(toggleUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')  // Add this if CSRF is enforced
+                'X-CSRFToken': getCookie('csrftoken')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            hideLoading();
+            console.log('Response data:', data);
+            
             if (data.success) {
-                showSuccess(data.message);
-                setTimeout(() => location.reload(), 1500);
+                // FIXED: Add null checks for elements that might not exist in grid view
+                const statusBadge = document.getElementById(`status-badge-${userId}`);
+                const toggleIcon = document.getElementById(`toggle-icon-${userId}`);
+                
+                if (data.new_status) {
+                    // User is now active
+                    if (statusBadge) {
+                        statusBadge.className = 'badge bg-success';
+                        statusBadge.textContent = 'Active';
+                    }
+                    if (toggleBtn) {
+                        toggleBtn.className = 'btn btn-outline-warning btn-sm';
+                        toggleBtn.title = 'Deactivate User';
+                    }
+                    if (toggleIcon) {
+                        toggleIcon.className = 'bi bi-pause';
+                    }
+                } else {
+                    // User is now inactive
+                    if (statusBadge) {
+                        statusBadge.className = 'badge bg-danger';
+                        statusBadge.textContent = 'Inactive';
+                    }
+                    if (toggleBtn) {
+                        toggleBtn.className = 'btn btn-outline-success btn-sm';
+                        toggleBtn.title = 'Activate User';
+                    }
+                    if (toggleIcon) {
+                        toggleIcon.className = 'bi bi-play';
+                    }
+                }
+                
+                // Update the onclick attribute for next toggle
+                if (toggleBtn) {
+                    const escapedUsername = username.replace(/'/g, "\\'");
+                    const escapedDisplayName = (displayName || username).replace(/'/g, "\\'");
+                    toggleBtn.setAttribute('onclick', `toggleUserStatus(${userId}, '${escapedUsername}', ${data.new_status}, '${escapedDisplayName}')`);
+                }
+                
+                // BONUS: Also update grid view elements if they exist
+                updateGridViewStatus(userId, data.new_status);
+                
+                showMessage(data.message, 'success');
             } else {
-                showError(data.message || 'Something went wrong.');
+                showMessage(data.message || 'Something went wrong.', 'danger');
             }
         })
-        .catch(() => showError('Server error. Please try again later.'));
-    });
+        .catch(error => {
+            hideLoading();
+            console.error('Error details:', error);
+            showMessage(`Error: ${error.message}`, 'danger');
+        })
+        .finally(() => {
+            if (toggleBtn) {
+                toggleBtn.disabled = false;
+                toggleBtn.innerHTML = originalBtnContent;
+            }
+        });
+    }, 'warning', actionCapital);
 }
 
-    
-    // Bulk actions (future enhancement)
-    function selectAllUsers() {
-        const checkboxes = document.querySelectorAll('input[name="selected_users"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
+// BONUS: Function to update grid view status badges
+function updateGridViewStatus(userId, isActive) {
+    // Find status badges in grid view (they don't have specific IDs)
+    const gridCards = document.querySelectorAll('#grid-view-content .card');
+    gridCards.forEach(card => {
+        // Look for cards that might contain this user's data
+        const badges = card.querySelectorAll('.badge');
+        badges.forEach(badge => {
+            if (badge.textContent.includes('Active') || badge.textContent.includes('Inactive')) {
+                if (isActive) {
+                    badge.className = 'badge bg-success';
+                    badge.textContent = 'Active';
+                } else {
+                    badge.className = 'badge bg-danger';
+                    badge.textContent = 'Inactive';
+                }
+            }
         });
+    });
+}
+    // FIXED: Delete user function with proper URL handling
+    function deleteUser(userId, username, displayName) {
+        console.log('Delete called with:', { userId, username, displayName });
+        
+        const message = `Are you sure you want to permanently delete user "${displayName || username}"?<br><br>This will remove all their data including tasks and cannot be undone.`;
+
+        // Use custom confirmation dialog with danger styling
+        showConfirmDialog(message, function() {
+            // Show loading
+            showLoading();
+
+            // FIXED: Use the global URL variable and replace properly
+            const deleteUrl = DELETE_USER_URL.replace('0', userId);
+            console.log('Making delete request to:', deleteUrl);
+
+            // Make the request
+            fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                console.log('Delete response status:', response.status);
+                console.log('Delete response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                hideLoading();
+                console.log('Delete response data:', data);
+                
+                if (data.success) {
+                    // Remove the user row from the table
+                    const userRow = document.getElementById(`user-row-${userId}`);
+                    if (userRow) {
+                        userRow.style.transition = 'opacity 0.3s ease-out';
+                        userRow.style.opacity = '0.3';
+                        setTimeout(() => {
+                            userRow.remove();
+                            // Update user count if visible
+                            updateUserCounts();
+                        }, 300);
+                    }
+                    
+                    // Show success message
+                    showMessage(data.message, 'success');
+                } else {
+                    // Handle API errors
+                    showMessage(data.message || 'Failed to delete user.', 'danger');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Delete error details:', error);
+                showMessage(`Delete error: ${error.message}`, 'danger');
+            });
+        }, 'danger', 'Delete User');
     }
-    
-    function deselectAllUsers() {
-        const checkboxes = document.querySelectorAll('input[name="selected_users"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
+
+    // Update user counts after deletion
+    function updateUserCounts() {
+        // Refresh the page after a short delay to update statistics
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     }
 </script>
 {% endblock %}
-
